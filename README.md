@@ -11,6 +11,11 @@ The Server Log Aggregator is a tool designed to aggregate, analyze, and compare 
 - **File Size Warnings**: Warn users about large files before loading them.
 - **Authentication**: Secure access to servers using credentials.
 
+![image](https://github.com/user-attachments/assets/d5d06def-6c42-4628-bedb-b324200cec8c)
+![image](https://github.com/user-attachments/assets/dd4f9c08-69ca-4127-8838-c2fa2a5e2584)
+![image](https://github.com/user-attachments/assets/dbb0d311-7df2-47db-a5a5-63de66002430)
+
+
 ## Installation
 
 1. Clone the repository:
