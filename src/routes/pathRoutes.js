@@ -42,16 +42,19 @@ module.exports = (logService, servers) => {
                         position: relative;
                     }
                     .server-info .date {
-                        width: 140px;
+                        flex: 1;
+                        flex-grow: 5;
                         color: #718096;
                     }
                     .server-info .size {
-                        width: 100px;
+                        flex: 1;
+                        flex-grow: 1;
                         text-align: right;
                     }
                     .server-info .direct-link {
-                        position: absolute;
-                        right: 0;
+                        flex: 1;
+                        flex-grow: 4;
+                        text-align: right;
                     }
                     .server-info .direct-link a {
                         color: #2c5282;
@@ -177,7 +180,6 @@ module.exports = (logService, servers) => {
                 </style>
             </head>
             <body>
-                <h2>Comparatif des logs Nginx</h2>
                 <div class="header-container">
                     <div class="breadcrumb">
                         <a href="${LogService.buildPathUrl()}"><i class="fas fa-home"></i>racine</a>
