@@ -42,18 +42,17 @@ module.exports = (logService, servers) => {
                         position: relative;
                     }
                     .server-info .date {
-                        flex: 1;
-                        flex-grow: 5;
+                        flex: 3;
                         color: #718096;
+                        white-space: nowrap;
                     }
                     .server-info .size {
-                        flex: 1;
-                        flex-grow: 1;
+                        flex: 2;
                         text-align: right;
+                        white-space: nowrap;
                     }
                     .server-info .direct-link {
                         flex: 1;
-                        flex-grow: 4;
                         text-align: right;
                     }
                     .server-info .direct-link a {
@@ -245,11 +244,13 @@ module.exports = (logService, servers) => {
                                         ${LogService.formatFileSize(entry[serverId].size)}
                                         ${LogService.isFileSizeExceeding(entry[serverId].size, 10) ? '<i class="fas fa-exclamation-triangle" title="Fichier > 10 Mo"></i>' : ''}
                                     </div>
-                                    <div class="direct-link">
-                                        <a href="${server.url}${path}${entry[serverId].href}" target="_blank">
-                                            <i class="fas fa-external-link-alt"></i>Voir
-                                        </a>
-                                    </div>
+                                    ${isDirectory ? '' : `
+                                        <div class="direct-link">
+                                            <a href="${LogService.buildRawUrl(serverId, path, entry.name)}" target="_blank">
+                                            <i class="fas fa-external-link-alt"></i>
+                                            </a>
+                                        </div>
+                                    `}
                                 </div>
                             ` : `
                                 <div class="server-info unavailable">

@@ -33,6 +33,23 @@ module.exports = (logService) => {
         }
     });
 
+    router.get('/raw/:serverId/*', async (req, res) => {
+        const serverId = req.params.serverId;
+        const filePath = req.params[0];
+
+        if (!serverId || !filePath) {
+            return res.status(400).json({ error: 'Identifiant du serveur ou chemin non spécifié' });
+        }
+
+        try {
+            const rawLog = await logService.fetchRawLog(serverId, filePath);
+            res.type('text/plain').send(rawLog);
+        } catch (error) {
+            console.error('Erreur lors de la récupération du fichier brut:', error);
+            res.status(500).json({ error: error.message });
+        }
+    });
+
     router.get('/scan/*', async (req, res) => {
         const path = req.params[0];
         if (!path) {
