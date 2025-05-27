@@ -54,7 +54,7 @@ class LogService {
         if (!filename) return false;
         if (this.isBinaryOrNonLogFile(filename)) return false;
         const logExtensions = ['.log', '.gz'];
-        return logExtensions.some(ext => filename.toLowerCase().endsWith(ext));
+        return logExtensions.some(ext => filename.toLowerCase().replace(/\.[\d-]+$/,'').endsWith(ext));
     }
 
     static normalizePath(pathStr) {
@@ -83,6 +83,13 @@ class LogService {
         const normalizedBase = this.normalizePath(basePath);
         const normalizedItem = this.normalizePath(itemPath);
         let url = '/view/' + normalizedBase + normalizedItem;
+        return url;
+    }
+
+    static buildRawUrl(serverId, basePath, itemPath) {
+        const normalizedBase = this.normalizePath(basePath);
+        const normalizedItem = this.normalizePath(itemPath);
+        let url = `/api/raw/${serverId}/${normalizedBase}${normalizedItem}`;
         return url;
     }
 
@@ -291,11 +298,26 @@ class LogService {
     }
 
     extractTimestamp(line) {
-        const timestampRegex = /\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3})\]/;
-        const match = line.match(timestampRegex);
+        // [2025-05-27T03:00:02.638] 
+        // [2025-05-27T03:00:02] 
+        // [2025-05-27] 
+        // [2025-05-27 03:00:02.638] 
+        // [2025-05-27 03:00:02] 
+        // 2025-05-27T03:00:02.638
+        // 2025-05-27T03:00:02
+        // 2025-05-27
+        // 2025-05-27 03:00:02.638
+        // 2025-05-27 03:00:02 
+        const timestampRegex = /(?:\[)?(\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}:\d{2}(?:\.\d{3})?)?)(?:\])?/;
+        const match = line.trim().match(timestampRegex);
         if (match) {
             const [_, timestamp] = match;
-            return new Date(timestamp);
+            // Normalize the timestamp to a proper ISO 8601 format
+            const normalizedTimestamp = timestamp.replace(' ', 'T');
+            const parsedDate = Date.parse(normalizedTimestamp);
+            if (!isNaN(parsedDate)) {
+                return new Date(parsedDate);
+            }
         }
         return null;
     }
@@ -344,7 +366,7 @@ class LogService {
             this.parseAndSortLogs(result.content, result.server, result.label, result.color)
         );
 
-        return allLogs.sort((a, b) => a.timestamp - b.timestamp);
+        return allLogs.sort((a, b) => a.server===b.server ? 0 : a.timestamp - b.timestamp);
     }
 
     parseAndSortLogs(content, server, label, color) {
@@ -354,28 +376,23 @@ class LogService {
         let lineNumber = 1;
 
         for (const line of lines) {
+            const timestamp = this.extractTimestamp(line);
+
             if (!line.trim()) {
                 lineNumber++;
                 continue;
             }
 
             // Regex pour extraire le timestamp dans les différents formats
-            const timestampMatch = line.match(/\[?(\d{4}-\d{2}-\d{2}(?:T|\s)?(?:\d{2}:\d{2}:\d{2}(?:\.\d{3})?)?)\]?/);
             
-            if (timestampMatch) {
+            
+            if (timestamp) {
                 if (currentLog) {
                     logs.push(currentLog);
                 }
                 
-                // Normaliser le format de la date
-                let timestampStr = timestampMatch[1];
-                if (timestampStr.includes('T')) {
-                    // Format ISO déjà correct
-                    timestampStr = timestampStr.replace('T', ' ');
-                }
-                
                 currentLog = {
-                    timestamp: new Date(timestampStr),
+                    timestamp,
                     content: line,
                     server,
                     label,
@@ -397,6 +414,49 @@ class LogService {
         }
 
         return logs;
+    }
+
+    async fetchRawLog(serverId, path) {
+        const server = this.servers[serverId];
+        if (!server) {
+            throw new Error(`Serveur non configuré: ${serverId}`);
+        }
+
+        const normalizedPath = LogService.normalizePath(path);
+        const fullUrl = server.url.replace(/\/$/, '') + '/' + normalizedPath;
+
+        console.log(`[DEBUG] fetchRawLog - URL appelée pour ${server.label}: ${fullUrl}`);
+
+        const credential = this.credentials[server.credentialId];
+        if (!credential || !credential.username || !credential.password) {
+            throw new Error(`Credentials manquants pour le serveur ${server.label}`);
+        }
+
+        const requestOptions = {
+            auth: {
+                username: credential.username,
+                password: credential.password
+            },
+            responseType: 'arraybuffer'
+        };
+
+        try {
+            const response = await axios.get(fullUrl, requestOptions);
+
+            let content;
+            if (normalizedPath.endsWith('.gz')) {
+                console.log(`[DEBUG] fetchRawLog - Décompression du fichier .gz pour ${server.label}`);
+                content = (await gunzip(response.data)).toString('utf-8');
+            } else {
+                content = response.data.toString('utf-8');
+            }
+
+            console.log(`[DEBUG] fetchRawLog - Contenu brut récupéré avec succès pour ${server.label} (${content.length} caractères)`);
+            return content;
+        } catch (error) {
+            console.error(`[DEBUG] fetchRawLog - Erreur pour ${server.label}:`, error.message);
+            throw error;
+        }
     }
 }
 
