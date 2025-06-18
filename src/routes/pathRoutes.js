@@ -2,10 +2,15 @@ const express = require('express');
 const router = express.Router();
 const LogService = require('../services/LogService');
 
-module.exports = (logService, servers) => {
+module.exports = () => {
     router.get('/*', async (req, res) => {
+        const servers = req.selectedServers;
+        const serverKey = req.selectedserverKey;
+        const logService = req.logService;
         const path = req.params[0] || '';
         const data = await logService.aggregateLogs(path);
+
+        console.log(`PathRoutes initialized for serverKey: ${serverKey}`);
         
         // Construire le fil d'Ariane
         const breadcrumbs = LogService.buildBreadcrumbs(path);
@@ -181,7 +186,8 @@ module.exports = (logService, servers) => {
             <body>
                 <div class="header-container">
                     <div class="breadcrumb">
-                        <a href="${LogService.buildPathUrl()}"><i class="fas fa-home"></i>racine</a>
+                        ${serverKey ? `<a href="/" class="server-key">${serverKey}</a> / ` : ''}
+                        <a href="${LogService.buildPathUrl()}"><i class="fas fa-home"></i>Racine</a>
                         ${breadcrumbs.map(link => `
                             <span class="separator">/</span>
                             ${link.isLast ? 
@@ -316,4 +322,4 @@ module.exports = (logService, servers) => {
     });
 
     return router;
-}; 
+};

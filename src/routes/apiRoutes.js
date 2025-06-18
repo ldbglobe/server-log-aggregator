@@ -2,8 +2,11 @@ const express = require('express');
 const router = express.Router();
 const LogService = require('../services/LogService');
 
-module.exports = (logService) => {
+module.exports = () => {
     router.get('/path/*', async (req, res) => {
+        const servers = req.selectedServers;
+        const serverKey = req.selectedserverKey;
+        const logService = req.logService;
         const path = req.params[0];
         try {
             const data = await logService.aggregateLogs(path);
@@ -15,6 +18,9 @@ module.exports = (logService) => {
     });
 
     router.get('/view/*', async (req, res) => {
+        const servers = req.selectedServers;
+        const serverKey = req.selectedserverKey;
+        const logService = req.logService;
         const path = req.params[0];
         if (!path) {
             return res.status(400).json({ error: 'Chemin non spécifié' });
@@ -34,6 +40,9 @@ module.exports = (logService) => {
     });
 
     router.get('/raw/:serverId/*', async (req, res) => {
+        const servers = req.selectedServers;
+        const serverKey = req.selectedserverKey;
+        const logService = req.logService;
         const serverId = req.params.serverId;
         const filePath = req.params[0];
 
@@ -43,7 +52,8 @@ module.exports = (logService) => {
 
         try {
             const rawLog = await logService.fetchRawLog(serverId, filePath);
-            res.type('text/plain').send(rawLog);
+            res.type('text/plain');
+            rawLog.pipe(res);
         } catch (error) {
             console.error('Erreur lors de la récupération du fichier brut:', error);
             res.status(500).json({ error: error.message });
@@ -51,6 +61,9 @@ module.exports = (logService) => {
     });
 
     router.get('/scan/*', async (req, res) => {
+        const servers = req.selectedServers;
+        const serverKey = req.selectedserverKey;
+        const logService = req.logService;
         const path = req.params[0];
         if (!path) {
             return res.status(400).json({ error: 'Chemin non spécifié' });

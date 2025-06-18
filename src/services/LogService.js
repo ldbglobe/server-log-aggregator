@@ -2,14 +2,13 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const zlib = require('zlib');
 const { promisify } = require('util');
-const config = require('../config');
 
 const gunzip = promisify(zlib.gunzip);
 
 class LogService {
-    constructor() {
-        this.servers = config.servers;
-        this.credentials = config.credentials || {};
+    constructor(servers,credentials) {
+        this.servers = servers;
+        this.credentials = credentials || {};
     }
 
     // Méthodes de FileUtils
@@ -441,18 +440,19 @@ class LogService {
         };
 
         try {
-            const response = await axios.get(fullUrl, requestOptions);
+            const response = await axios.get(fullUrl, {
+                ...requestOptions,
+                responseType: 'stream'
+            });
+            const stream = response.data; // This is a readable stream
 
-            let content;
             if (normalizedPath.endsWith('.gz')) {
                 console.log(`[DEBUG] fetchRawLog - Décompression du fichier .gz pour ${server.label}`);
-                content = (await gunzip(response.data)).toString('utf-8');
-            } else {
-                content = response.data.toString('utf-8');
+                return stream.pipe(zlib.createGunzip());
             }
 
-            console.log(`[DEBUG] fetchRawLog - Contenu brut récupéré avec succès pour ${server.label} (${content.length} caractères)`);
-            return content;
+            console.log(`[DEBUG] fetchRawLog - Contenu brut récupéré avec succès pour ${server.label}`);
+            return stream;
         } catch (error) {
             console.error(`[DEBUG] fetchRawLog - Erreur pour ${server.label}:`, error.message);
             throw error;

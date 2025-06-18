@@ -1,21 +1,43 @@
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const LogService = require('./services/LogService');
-config = require('./config');
+const config = require('./config');
 const chalk = require('chalk').default; // Import chalk for colored output
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 // Middleware pour parser le body des requêtes POST
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-// Initialiser le service de logs
-const logService = new LogService();
+// Middleware to determine selected server group
+app.use((req, res, next) => {
+    // Priority: query > body > cookie > default
+    let serverKey = req.query.serverKey
+        || req.body?.serverKey
+        || req.cookies?.serverKey
+        || config.selectedserverKey;
+
+    console.log(chalk.blue(`Selected serverKey: ${serverKey}`));
+
+    // Save in cookie for persistence
+    if (serverKey && req.cookies.serverKey !== serverKey) {
+        res.cookie('serverKey', serverKey, { httpOnly: false });
+    }
+
+    req.selectedserverKey = serverKey;
+    req.selectedServers = config.servers[serverKey] || {}
+    req.logService = new LogService(req.selectedServers, config.credentials);
+    next();
+});
 
 // Middleware de vérification des credentials
 app.use((req, res, next) => {
-    const missingCredentials = logService.getMissingCredentials();
+    const missingCredentials = req.logService.getMissingCredentials();
     if (missingCredentials.length > 0 && !req.path.startsWith('/auth')) {
         return res.redirect('/auth/login');
     }
@@ -23,16 +45,14 @@ app.use((req, res, next) => {
 });
 
 // Routes
-app.use('/auth', require('./routes/authRoutes')(logService));
-app.use('/path', require('./routes/pathRoutes')(logService, config.servers));
-app.use('/view', require('./routes/viewRoutes')(logService, config.servers));
-app.use('/api', require('./routes/apiRoutes')(logService));
+// Pass req.selectedServers to routes
+app.use('/auth', require('./routes/authRoutes')());
+app.use('/path', require('./routes/pathRoutes')());
+app.use('/view', require('./routes/viewRoutes')());
+app.use('/api', require('./routes/apiRoutes')());
+app.use('/', require('./routes/indexRoutes')(config.servers, config.selectedserverKey));
 
-// Redirection de la racine vers /path
-app.get('/', (req, res) => {
-    res.redirect('/path');
-});
 
 app.listen(port, () => {
     console.log(chalk.green(`Serveur démarré sur ${chalk.underline(`http://localhost:${port}`)}`));
-}); 
+});

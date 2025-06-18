@@ -36,7 +36,7 @@ The Server Log Aggregator is a tool designed to aggregate, analyze, and compare 
 4. Create a configuration file:
    - Copy the sample configuration:
      ```bash
-     cp src/config.sample.json conf/<your-config-name>.json
+     cp conf/sample.js conf/<your-config-name>.js
      ```
    - Edit the configuration file to include your server details and credentials.
 
@@ -79,7 +79,7 @@ The configuration file should include:
 - **Credentials**: Usernames and passwords for server access.
 - **Servers**: Server URLs, labels, and optional colors for UI representation.
 
-Refer to `src/config.sample.json` for an example.
+Refer to `conf/sample.js` for an example.
 
 ### Placement and Naming
 
@@ -91,30 +91,3 @@ For example:
 ```bash
 npm start production
 ```
-
-## Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository.
-2. Create a new branch:
-   ```bash
-   git checkout -b feature-name
-   ```
-3. Commit your changes:
-   ```bash
-   git commit -m "Description of changes"
-   ```
-4. Push to your branch:
-   ```bash
-   git push origin feature-name
-   ```
-5. Open a pull request.
-
-## License
-
-This project is licensed under the ISC License. See the `LICENSE` file for details.
-
-## Contact
-
-For questions or feedback, please open an issue on our [GitHub repository](https://github.com/your-repo/server-log-aggregator/issues).

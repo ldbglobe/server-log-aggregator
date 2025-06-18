@@ -17,8 +17,14 @@ function formatTimestamp(date) {
     });
 }
 
-module.exports = (logService, servers) => {
+module.exports = () => {
     router.get('/*', async (req, res) => {
+        const servers = req.selectedServers;
+        const serverKey = req.selectedserverKey;
+        const logService = req.logService;
+
+        console.log(`ViewRoutes initialized for serverKey: ${serverKey}`);
+
         const path = req.params[0];
         if (!path) {
             return res.status(400).send('Chemin non spécifié');
@@ -300,6 +306,7 @@ module.exports = (logService, servers) => {
             <body>
                 <div class="header-container">
                     <div class="breadcrumb">
+                        ${serverKey ? `<a href="/" class="server-key">${serverKey}</a> / ` : ''}
                         <a href="${LogService.buildPathUrl()}"><i class="fas fa-home"></i>racine</a>
                         ${breadcrumbs.map(link => `
                             <span class="separator">/</span>

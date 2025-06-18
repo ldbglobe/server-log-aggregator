@@ -1,9 +1,15 @@
 const express = require('express');
 const router = express.Router();
 
-module.exports = (logService) => {
+module.exports = () => {
     // Route pour afficher le formulaire de connexion
     router.get('/login', (req, res) => {
+        const servers = req.selectedServers;
+        const serverKey = req.selectedserverKey;
+        const logService = req.logService;
+
+        console.log(`AuthRoutes initialized for serverKey: ${serverKey}`);
+
         const missingCredentials = logService.getMissingCredentials();
         if (missingCredentials.length === 0) {
             return res.redirect('/');
