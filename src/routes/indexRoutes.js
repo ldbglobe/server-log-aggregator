@@ -9,7 +9,7 @@ module.exports = (servers, selectedserverKey) => {
         res.send(`
             <html>
             <head>
-                <title>Choix du groupe de serveurs</title>
+                <title>Select server group</title>
                 <style>
                     body { font-family: Arial, sans-serif; margin: 2em; }
                     .card-container {
@@ -65,7 +65,7 @@ module.exports = (servers, selectedserverKey) => {
                 </style>
             </head>
             <body>
-                <h2>Choisissez un groupe de serveurs</h2>
+                <h2>Select a server group</h2>
                 <div class="card-container">
                     ${serverGroups.map(([key, group]) => `
                         <div class="server-card" id="card-${key}" data-key="${key}">
@@ -73,7 +73,7 @@ module.exports = (servers, selectedserverKey) => {
                             <div class="server-list">
                                 ${Object.values(group).map(srv => srv.label).join(', ')}
                             </div>
-                            <button onclick="selectGroup('${key}')" id="btn-${key}">Consulter</button>
+                            <button onclick="selectGroup('${key}')" id="btn-${key}">Browse</button>
                         </div>
                     `).join('')}
                 </div>

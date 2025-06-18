@@ -60,7 +60,7 @@ for (const [groupName, groupServers] of Object.entries(config.servers)) {
 
 // Display a summary of the servers to be used
 console.log(chalk.green('Configuration loaded successfully!'));
-console.log(chalk.blue('Servers to be used:'));
+console.log(chalk.blue('Servers groups available:'));
 for (const [groupName, groupServers] of Object.entries(config.servers)) {
     console.log(chalk.magenta(`Group: ${groupName}`));
     for (const server of Object.values(groupServers)) {

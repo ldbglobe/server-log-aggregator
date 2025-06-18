@@ -2,9 +2,9 @@ const express = require('express');
 const router = express.Router();
 const LogService = require('../services/LogService');
 
-// Fonction pour formater les timestamps
+// Function to format timestamps
 function formatTimestamp(date) {
-    if (!date) return 'Sans timestamp';
+    if (!date) return 'No timestamp';
     return date.toLocaleString('fr-FR', {
         timeZone: 'Europe/Paris',
         year: 'numeric',
@@ -27,18 +27,18 @@ module.exports = () => {
 
         const path = req.params[0];
         if (!path) {
-            return res.status(400).send('Chemin non spécifié');
+            return res.status(400).send('Path not specified');
         }
 
         if (!LogService.isLogFileType(path)) {
-            return res.status(400).send('Type de fichier non supporté. Seuls les fichiers .log et .gz sont acceptés.');
+            return res.status(400).send('Unsupported file type. Only .log and .gz files are accepted.');
         }
 
         try {
             const logs = await logService.fetchFileContent(path);
             const sensitiveData = logService.scanForSensitiveData(logs);
             
-            // Construire le fil d'Ariane
+            // Build breadcrumbs
             const breadcrumbs = LogService.buildBreadcrumbs(path);
             
             // Count lines per server
@@ -307,7 +307,7 @@ module.exports = () => {
                 <div class="header-container">
                     <div class="breadcrumb">
                         ${serverKey ? `<a href="/" class="server-key">${serverKey}</a> / ` : ''}
-                        <a href="${LogService.buildPathUrl()}"><i class="fas fa-home"></i>racine</a>
+                        <a href="${LogService.buildPathUrl()}"><i class="fas fa-home"></i>root</a>
                         ${breadcrumbs.map(link => `
                             <span class="separator">/</span>
                             ${link.isLast ? 
@@ -339,17 +339,17 @@ module.exports = () => {
                         <input type="text" 
                                id="logSearch" 
                                class="search-input" 
-                               placeholder="Rechercher dans les logs (regex supporté)..."
-                               title="Utilisez des expressions régulières pour la recherche">
+                               placeholder="Search logs (regex supported)..."
+                               title="Use regular expressions for search">
                         <span class="search-info">
-                            <span id="matchCount">0</span> correspondances
+                            <span id="matchCount">0</span> matches
                         </span>
                     </div>
                     <div class="server-legend">
                         ${Object.entries(servers).map(([id, server]) => `
                             <div class="server-legend-item">
                                 <div class="server-color ${id}"></div>
-                                <span>${server.label} (${serverLineCounts[id] || 0} lignes)</span>
+                                <span>${server.label} (${serverLineCounts[id] || 0} lines)</span>
                             </div>
                         `).join('')}
                     </div>
@@ -381,11 +381,11 @@ module.exports = () => {
             `;
             res.send(html);
         } catch (error) {
-            console.error('Erreur lors de la récupération du fichier:', error);
+            console.error('Error while fetching the file:', error);
             res.status(500).send(`
                 <html>
                 <head>
-                    <title>Erreur</title>
+                    <title>Error</title>
                     <style>
                         body { font-family: Arial, sans-serif; margin: 2em; }
                         .error-container {
@@ -423,12 +423,12 @@ module.exports = () => {
                     <div class="error-container">
                         <h2 class="error-title">
                             <i class="fas fa-exclamation-circle"></i>
-                            Erreur lors de la récupération du fichier
+                            Error while fetching the file
                         </h2>
                         <p class="error-message">${error.message}</p>
                         <a href="/path/${path.split('/').slice(0, -1).join('/')}" class="back-link">
                             <i class="fas fa-arrow-left"></i>
-                            Retour à la liste
+                            Back to list
                         </a>
                     </div>
                 </body>

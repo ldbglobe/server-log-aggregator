@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 module.exports = () => {
-    // Route pour afficher le formulaire de connexion
+    // Route to display the login form
     router.get('/login', (req, res) => {
         const servers = req.selectedServers;
         const serverKey = req.selectedserverKey;
@@ -19,7 +19,7 @@ module.exports = () => {
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Authentification - Server Log Aggregator</title>
+                <title>Authentication - Server Log Aggregator</title>
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
                 <style>
                     body {
@@ -114,26 +114,26 @@ module.exports = () => {
             </head>
             <body>
                 <div class="login-container">
-                    <h1>Authentification requise</h1>
+                    <h1>Authentication required</h1>
                     <form action="/auth/login" method="POST" onsubmit="saveCredentials()">
                         ${missingCredentials.map(credentialId => `
                             <div class="credential-form">
                                 <div class="ldap-info">
                                     <i class="fas fa-info-circle"></i>
-                                    Veuillez entrer vos identifiants LDAP pour accéder au serveur
+                                    Please enter your LDAP credentials to access the server
                                 </div>
-                                <h2>Identifiants pour ${credentialId}</h2>
+                                <h2>Credentials for ${credentialId}</h2>
                                 <div class="form-group">
-                                    <label for="username_${credentialId}">Nom d'utilisateur LDAP</label>
+                                    <label for="username_${credentialId}">LDAP Username</label>
                                     <input type="text" id="username_${credentialId}" name="credentials[${credentialId}][username]" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="password_${credentialId}">Mot de passe LDAP</label>
+                                    <label for="password_${credentialId}">LDAP Password</label>
                                     <input type="password" id="password_${credentialId}" name="credentials[${credentialId}][password]" required>
                                 </div>
                             </div>
                         `).join('')}
-                        <button type="submit">Se connecter</button>
+                        <button type="submit">Log in</button>
                     </form>
                 </div>
             </body>
@@ -142,12 +142,12 @@ module.exports = () => {
         res.send(html);
     });
 
-    // Route pour traiter le formulaire de connexion
+    // Route to process the login form
     router.post('/login', (req, res) => {
         const credentials = req.body.credentials;
-        logService.setCredentials(credentials);
+        req.logService.setCredentials(credentials);
         res.redirect('/');
     });
 
     return router;
-}; 
+};

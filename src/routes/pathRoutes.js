@@ -12,13 +12,13 @@ module.exports = () => {
 
         console.log(`PathRoutes initialized for serverKey: ${serverKey}`);
         
-        // Construire le fil d'Ariane
+        // Build breadcrumbs
         const breadcrumbs = LogService.buildBreadcrumbs(path);
         
         let html = `
             <html>
             <head>
-                <title>Comparatif logs Nginx</title>
+                <title>Logs Comparison</title>
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
                 <style>
                     body { font-family: Arial, sans-serif; margin: 2em; }
@@ -187,7 +187,7 @@ module.exports = () => {
                 <div class="header-container">
                     <div class="breadcrumb">
                         ${serverKey ? `<a href="/" class="server-key">${serverKey}</a> / ` : ''}
-                        <a href="${LogService.buildPathUrl()}"><i class="fas fa-home"></i>Racine</a>
+                        <a href="${LogService.buildPathUrl()}"><i class="fas fa-home"></i>Root</a>
                         ${breadcrumbs.map(link => `
                             <span class="separator">/</span>
                             ${link.isLast ? 
@@ -203,7 +203,7 @@ module.exports = () => {
                 <table>
                     <thead>
                         <tr>
-                            <th>Nom</th>
+                            <th>Name</th>
                             ${Object.entries(servers).map(([id, server]) => `
                                 <th>${server.label}</th>
                             `).join('')}
@@ -213,7 +213,7 @@ module.exports = () => {
             `;
 
             for (const entry of data) {
-                // Vérifier si tous les serveurs ont le fichier
+                // Check if all servers have the file
                 const isSync = Object.keys(servers).every(serverId => entry[serverId]);
                 const rowClass = isSync ? 'sync' : 'diff';
                 
@@ -248,7 +248,7 @@ module.exports = () => {
                                     <div class="date">${entry[serverId].date || '-'}</div>
                                     <div class="size ${LogService.isFileSizeExceeding(entry[serverId].size, 10) ? 'size-warning' : ''}">
                                         ${LogService.formatFileSize(entry[serverId].size)}
-                                        ${LogService.isFileSizeExceeding(entry[serverId].size, 10) ? '<i class="fas fa-exclamation-triangle" title="Fichier > 10 Mo"></i>' : ''}
+                                        ${LogService.isFileSizeExceeding(entry[serverId].size, 10) ? '<i class="fas fa-exclamation-triangle" title="File > 10 MB"></i>' : ''}
                                     </div>
                                     ${isDirectory ? '' : `
                                         <div class="direct-link">
@@ -260,7 +260,7 @@ module.exports = () => {
                                 </div>
                             ` : `
                                 <div class="server-info unavailable">
-                                    <span>Non disponible</span>
+                                    <span>Unavailable</span>
                                 </div>
                             `}
                         </td>
@@ -269,18 +269,18 @@ module.exports = () => {
             }
             html += `</tbody></table>
 
-                <!-- Modal d'avertissement -->
+                <!-- Warning modal -->
                 <div id="warningModal" class="modal">
                     <div class="modal-content">
                         <div class="modal-header">
                             <i class="fas fa-exclamation-triangle"></i>
-                            <h3>Fichier volumineux</h3>
+                            <h3>Large file</h3>
                         </div>
-                        <p>Ce fichier dépasse 10 Mo. Son chargement peut prendre un certain temps et impacter les performances.</p>
-                        <p>Voulez-vous continuer ?</p>
+                        <p>This file exceeds 10 MB. Loading it may take some time and impact performance.</p>
+                        <p>Do you want to continue?</p>
                         <div class="modal-buttons">
-                            <button class="modal-button cancel" onclick="closeModal()">Annuler</button>
-                            <button class="modal-button proceed" onclick="proceedToView()">Continuer</button>
+                            <button class="modal-button cancel" onclick="closeModal()">Cancel</button>
+                            <button class="modal-button proceed" onclick="proceedToView()">Continue</button>
                         </div>
                     </div>
                 </div>
@@ -308,7 +308,7 @@ module.exports = () => {
                         }
                     }
                     
-                    // Fermer la modale si on clique en dehors
+                    // Close modal if clicking outside
                     window.onclick = function(event) {
                         const modal = document.getElementById('warningModal');
                         if (event.target == modal) {

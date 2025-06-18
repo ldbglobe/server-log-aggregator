@@ -10,7 +10,7 @@ const cookieParser = require('cookie-parser');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middleware pour parser le body des requêtes POST
+// Middleware to parse the body of POST requests
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
@@ -35,7 +35,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// Middleware de vérification des credentials
+// Middleware to check credentials
 app.use((req, res, next) => {
     const missingCredentials = req.logService.getMissingCredentials();
     if (missingCredentials.length > 0 && !req.path.startsWith('/auth')) {
@@ -54,5 +54,8 @@ app.use('/', require('./routes/indexRoutes')(config.servers, config.selectedserv
 
 
 app.listen(port, () => {
-    console.log(chalk.green(`Serveur démarré sur ${chalk.underline(`http://localhost:${port}`)}`));
+    // Log the server start message with colored output
+    console.log(chalk.green(`Server started at ${chalk.underline(`http://localhost:${port}`)}`));
+    // Press CTRL+C to stop the server
+    console.log(chalk.yellow('Press CTRL+C to stop the server.'));
 });

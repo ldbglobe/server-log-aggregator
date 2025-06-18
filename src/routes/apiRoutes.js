@@ -12,7 +12,7 @@ module.exports = () => {
             const data = await logService.aggregateLogs(path);
             res.json(data);
         } catch (error) {
-            console.error('Erreur lors de la récupération des logs:', error);
+            console.error('Error while fetching logs:', error);
             res.status(500).json({ error: error.message });
         }
     });
@@ -23,18 +23,18 @@ module.exports = () => {
         const logService = req.logService;
         const path = req.params[0];
         if (!path) {
-            return res.status(400).json({ error: 'Chemin non spécifié' });
+            return res.status(400).json({ error: 'Path not specified' });
         }
 
         if (!LogService.isLogFileType(path)) {
-            return res.status(400).json({ error: 'Type de fichier non supporté. Seuls les fichiers .log et .gz sont acceptés.' });
+            return res.status(400).json({ error: 'Unsupported file type. Only .log and .gz files are accepted.' });
         }
 
         try {
             const logs = await logService.fetchFileContent(path);
             res.json(logs);
         } catch (error) {
-            console.error('Erreur lors de la récupération du fichier:', error);
+            console.error('Error while fetching the file:', error);
             res.status(500).json({ error: error.message });
         }
     });
@@ -47,7 +47,7 @@ module.exports = () => {
         const filePath = req.params[0];
 
         if (!serverId || !filePath) {
-            return res.status(400).json({ error: 'Identifiant du serveur ou chemin non spécifié' });
+            return res.status(400).json({ error: 'Server ID or path not specified' });
         }
 
         try {
@@ -55,7 +55,7 @@ module.exports = () => {
             res.type('text/plain');
             rawLog.pipe(res);
         } catch (error) {
-            console.error('Erreur lors de la récupération du fichier brut:', error);
+            console.error('Error while fetching raw file:', error);
             res.status(500).json({ error: error.message });
         }
     });
@@ -66,7 +66,7 @@ module.exports = () => {
         const logService = req.logService;
         const path = req.params[0];
         if (!path) {
-            return res.status(400).json({ error: 'Chemin non spécifié' });
+            return res.status(400).json({ error: 'Path not specified' });
         }
 
         try {
@@ -74,7 +74,7 @@ module.exports = () => {
             const sensitiveData = logService.scanForSensitiveData(logs);
             res.json(sensitiveData);
         } catch (error) {
-            console.error('Erreur lors de l’analyse des données sensibles:', error);
+            console.error('Error while scanning for sensitive data:', error);
             res.status(500).json({ error: error.message });
         }
     });
