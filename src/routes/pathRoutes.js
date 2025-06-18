@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const LogService = require('../services/LogService');
 
+const largeFileSizeThreshold = 5; // MB
+
 module.exports = () => {
     router.get('/*', async (req, res) => {
         const servers = req.selectedServers;
@@ -220,51 +222,71 @@ module.exports = () => {
                 const isDirectory = entry.isDirectory;
                 const isLogFile = entry.isLogFileType;
                 const isArchive = entry.isArchiveFile;
+                const haveLargeFile = isLogFile && Object.entries(servers).some(([serverId, server]) => LogService.isFileSizeExceeding(entry[serverId]?.size, largeFileSizeThreshold));
                 
-                const icon = isDirectory ? 'fa-folder' : 
-                            isArchive ? 'fa-file-zipper' :
-                            isLogFile ? 'fa-file-lines' : 'fa-file';
+                let icon;
+                if (isDirectory) {
+                    icon = 'fa-folder';
+                } else if (isArchive) {
+                    icon = 'fa-file-zipper';
+                } else if (isLogFile) {
+                    icon = 'fa-file-lines';
+                } else {
+                    icon = 'fa-file';
+                }
                 const linkClass = isDirectory ? 'folder-link' : 'file-link';
+                const linkPath = LogService.buildPathUrl(path, entry.name);
                 
+                let nameCellContent;
+                if (isDirectory) {
+                    nameCellContent = `<a href="${linkPath}" class="${linkClass}">
+                        <i class="fas ${icon}"></i>${entry.name}
+                    </a>`;
+                } else if (isLogFile) {
+                    nameCellContent = `<a href="#" onclick="handleFileClick('${linkPath}', ${haveLargeFile}); return false;" class="${linkClass}">
+                        <i class="fas ${icon}"></i>${entry.name}
+                    </a>`;
+                } else {
+                    nameCellContent = `<i class="fas ${icon}"></i>${entry.name}`;
+                }
+
                 html += `<tr class="${rowClass}">
                     <td class="mono">
                         <div class="link-container">
-                            ${isDirectory ? 
-                                `<a href="${LogService.buildPathUrl(path, entry.name)}" class="${linkClass}">
-                                    <i class="fas ${icon}"></i>${entry.name}
-                                </a>` :
-                                isLogFile ?
-                                `<a href="#" onclick="handleFileClick('${LogService.buildViewUrl(path, entry.name)}', ${Object.values(servers).some(server => LogService.isFileSizeExceeding(entry[server.id]?.size, 10))}); return false;" class="${linkClass}">
-                                    <i class="fas ${icon}"></i>${entry.name}
-                                </a>` :
-                                `<i class="fas ${icon}"></i>${entry.name}`
-                            }
+                            ${nameCellContent}
                         </div>
                     </td>
-                    ${Object.entries(servers).map(([serverId, server]) => `
-                        <td>
+                    ${Object.entries(servers).map(([serverId, server]) => {
+                        let directLinkHtml = '';
+                        if (!isDirectory) {
+                            directLinkHtml = `
+                                <div class="direct-link">
+                                    <a href="${LogService.buildRawUrl(serverId, path, entry.name)}" target="_blank">
+                                    <i class="fas fa-external-link-alt"></i>
+                                    </a>
+                                </div>
+                            `;
+                        }
+                        let isLargeFile = entry[serverId] && LogService.isFileSizeExceeding(entry[serverId].size, largeFileSizeThreshold);
+
+                        let sizeText = entry[serverId] ? LogService.formatFileSize(entry[serverId].size) : '-';
+                        let sizeClass = isLargeFile ? 'size-warning' : '';
+                        let sizeWarningIcon = isLargeFile ? `<i class="fas fa-exclamation-triangle" title="File > ${largeFileSizeThreshold} MB"></i>` : '';
+
+                        return `<td>
                             ${entry[serverId] ? `
                                 <div class="server-info">
                                     <div class="date">${entry[serverId].date || '-'}</div>
-                                    <div class="size ${LogService.isFileSizeExceeding(entry[serverId].size, 10) ? 'size-warning' : ''}">
-                                        ${LogService.formatFileSize(entry[serverId].size)}
-                                        ${LogService.isFileSizeExceeding(entry[serverId].size, 10) ? '<i class="fas fa-exclamation-triangle" title="File > 10 MB"></i>' : ''}
-                                    </div>
-                                    ${isDirectory ? '' : `
-                                        <div class="direct-link">
-                                            <a href="${LogService.buildRawUrl(serverId, path, entry.name)}" target="_blank">
-                                            <i class="fas fa-external-link-alt"></i>
-                                            </a>
-                                        </div>
-                                    `}
+                                    <div class="size ${sizeClass}">${sizeText} ${sizeWarningIcon}</div>
+                                    ${directLinkHtml}
                                 </div>
                             ` : `
                                 <div class="server-info unavailable">
                                     <span>Unavailable</span>
                                 </div>
                             `}
-                        </td>
-                    `).join('')}
+                        </td>`
+                    }).join('')}
                 </tr>`;
             }
             html += `</tbody></table>
@@ -276,7 +298,7 @@ module.exports = () => {
                             <i class="fas fa-exclamation-triangle"></i>
                             <h3>Large file</h3>
                         </div>
-                        <p>This file exceeds 10 MB. Loading it may take some time and impact performance.</p>
+                        <p>This file exceeds ${largeFileSizeThreshold} MB. Loading it may take some time and impact performance.</p>
                         <p>Do you want to continue?</p>
                         <div class="modal-buttons">
                             <button class="modal-button cancel" onclick="closeModal()">Cancel</button>
@@ -289,6 +311,7 @@ module.exports = () => {
                     let pendingPath = '';
                     
                     function handleFileClick(path, isLargeFile) {
+                        console.log('File clicked:', path, 'Large file:', isLargeFile);
                         if (isLargeFile) {
                             pendingPath = path;
                             document.getElementById('warningModal').style.display = 'block';
