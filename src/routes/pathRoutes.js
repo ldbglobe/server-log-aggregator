@@ -235,15 +235,14 @@ module.exports = () => {
                     icon = 'fa-file';
                 }
                 const linkClass = isDirectory ? 'folder-link' : 'file-link';
-                const linkPath = LogService.buildPathUrl(path, entry.name);
                 
                 let nameCellContent;
                 if (isDirectory) {
-                    nameCellContent = `<a href="${linkPath}" class="${linkClass}">
+                    nameCellContent = `<a href="${LogService.buildPathUrl(path, entry.name)}" class="${linkClass}">
                         <i class="fas ${icon}"></i>${entry.name}
                     </a>`;
                 } else if (isLogFile) {
-                    nameCellContent = `<a href="#" onclick="handleFileClick('${linkPath}', ${haveLargeFile}); return false;" class="${linkClass}">
+                    nameCellContent = `<a href="#" onclick="handleFileClick('${LogService.buildViewUrl(path, entry.name)}', ${haveLargeFile}); return false;" class="${linkClass}">
                         <i class="fas ${icon}"></i>${entry.name}
                     </a>`;
                 } else {
