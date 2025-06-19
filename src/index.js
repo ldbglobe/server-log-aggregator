@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const path = require('path');
+const expressHandlebars = require('express-handlebars');
 const LogService = require('./services/LogService');
 const config = require('./config');
 const chalk = require('chalk').default; // Import chalk for colored output
@@ -10,6 +11,11 @@ const openurl = require('openurl');
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Handlebars view engine setup
+app.engine('hbs', expressHandlebars.engine({ extname: '.hbs', defaultLayout: false }));
+app.set('view engine', 'hbs');
+app.set('views', path.join(__dirname, '../views'));
 
 // Middleware to parse the body of POST requests
 app.use(express.urlencoded({ extended: true }));

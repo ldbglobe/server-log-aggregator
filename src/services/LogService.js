@@ -400,11 +400,9 @@ class LogService {
 
     __buildHash(log) {
         const hashKey = log.lineNumber + '\n' + (log.timestamp ? log.timestamp.toISOString() : '') +'\n'+ log.content +'\n'+ log.additionalLines.map(l => l.content).join('\n');
-        console.log(`[DEBUG] __buildHash - Clé de hachage: ${hashKey}`);
         const hash = crypto.createHash('sha256')
             .update(hashKey)
             .digest('hex');
-        console.log(`[DEBUG] __buildHash - Hachage généré: ${hash}`);
         return hash;
     }
 

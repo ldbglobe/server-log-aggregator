@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Log Viewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2em; background: #f5f5f5; }
+        .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5em; }
+        .breadcrumb { display: flex; align-items: center; gap: 0.5em; background: #f7fafc; padding: 0.75em 1em; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .breadcrumb i { margin-right: 0.5em; }
+        .breadcrumb a { color: #2c5282; text-decoration: none; font-weight: 500; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        .breadcrumb .separator { color: #a0aec0; font-size: 0.9em; }
+        .breadcrumb .current { color: #4a5568; font-weight: 500; }
+        .log-container { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.07); padding: 1.5em; margin-bottom: 2em; }
+        .log-header { font-weight: bold; color: #2c5282; margin-bottom: 0.5em; display: flex; align-items: center; gap: 1em; }
+        .log-line { display: flex; align-items: flex-start; }
+        .log-content { font-family: monospace; font-size: 1em; background: #f7fafc; border-radius: 4px; padding: 0.5em 1em; overflow-x: auto; white-space: pre-wrap; }
+        .sensitive { background: #fffbe6; color: #b59a00; padding: 0.2em 0.4em; border-radius: 3px; font-weight: bold; }
+        .server-label { font-weight: bold; padding: 0.2em 0.7em; border-radius: 4px; color: #fff; margin-right: 0.5em; display: inline-block; }
+        .line-number { color: #718096; font-size: 0.95em; font-family: monospace; background: #edf2f7; padding: 0.2em 0.5em; border-radius: 3px; margin-right: 0.5em; }
+        .timestamp { color: #718096; font-size: 0.95em; margin-left: 1em; }
+        .server-legend { display: flex; gap: 1em; margin-bottom: 1em; padding: 0.5em; background: #f8fafc; border-radius: 4px; }
+        .server-legend-item { display: flex; align-items: center; gap: 0.5em; }
+        .server-color { width: 20px; height: 20px; border-radius: 4px; display: inline-block; }
+        .highlight { background-color: #fefcbf; border-radius: 2px; padding:2px 0px; }
+        .search-container { display: flex; gap: 0.5em; margin-bottom: 1em; align-items: center; }
+        .search-input { flex: 1; padding: 0.5em; border: 1px solid #e2e8f0; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+        .search-input:focus { outline: none; border-color: #4299e1; box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1); }
+        .search-info { color: #718096; font-size: 0.9em; white-space: nowrap; }
+        .search-count { background: #edf2f7; padding: 0.2em 0.5em; border-radius: 3px; font-family: monospace; }
+        .toggle-json-btn {
+            background: #3182ce;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 0.3em 1em;
+            font-size: 0.95em;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            margin-left: auto;
+            margin-top: 2px;
+        }
+        .toggle-json-btn:hover, .toggle-json-btn:focus {
+            background: #2b6cb0;
+            color: #e2e8f0;
+        }
+        .line-number { color: #718096; font-size: 0.95em; font-family: monospace; background: #edf2f7; padding: 0.2em 0.5em; border-radius: 3px; margin-right: 0.5em; }
+        .timestamp { color: #718096; font-size: 0.95em; margin-left: 1em; }
+        .log-header span:last-child { margin-left: 0.5em; }
+    </style>
+</head>
+<body>
+    <div class="header-container">
+        <div class="breadcrumb">
+            {{#serverGroupLabel}}
+                <a href="/" class="server-key"><i class="fas fa-server"></i>{{serverGroupLabel}}</a> /
+            {{/serverGroupLabel}}
+            <a href="{{rootUrl}}"><i class="fas fa-home"></i>Root</a>
+            {{#breadcrumbs}}
+                <span class="separator">/</span>
+                {{#isLast}}
+                    <span class="current">{{name}}</span>
+                {{/isLast}}
+                {{^isLast}}
+                    <a href="{{url}}">{{name}}</a>
+                {{/isLast}}
+            {{/breadcrumbs}}
+        </div>
+    </div>
+    <div class="server-legend">
+        {{#serverInfos}}
+            <div class="server-legend-item">
+                <span class="server-color" style="background: {{color}}"></span>
+                <span>{{label}}</span>
+            </div>
+        {{/serverInfos}}
+    </div>
+    <div class="search-container">
+        <input type="text" id="logSearch" class="search-input" placeholder="Search logs (regex supported)..." title="Use regular expressions for search" autocomplete="off">
+        <span class="search-info"><span id="matchCount">0</span> matches</span>
+    </div>
+    <div id="logs-list">
+    {{#logs}}
+        <div class="log-container">
+            {{#lines}}
+                <div class="log-header" style="display: flex; align-items: center;">
+                    {{#../servers}}
+                        <span class="server-label" style="background: {{color}}">{{label}}</span>
+                    {{/../servers}}
+                    <span class="line-number">L{{../lineNumber}}</span>
+                    <span class="timestamp">{{../timestamp}}</span>
+                    <span>({{../lineCount}} lines)</span>
+                    {{#isJson}}
+                        <button class="toggle-json-btn" onclick="toggleJsonView(this)">Show formatted</button>
+                    {{/isJson}}
+                </div>
+                <div class="log-line" data-log-line>
+                    <pre class="log-content raw-view" style="display:block;">{{{raw}}}</pre>
+                    {{#isJson}}
+                        <pre class="log-content formatted-view" style="display:none;">{{{formatted}}}</pre>
+                    {{/isJson}}
+                </div>
+            {{/lines}}
+            {{#sensitive}}
+                <div class="sensitive">Sensitive data detected!</div>
+            {{/sensitive}}
+        </div>
+    {{/logs}}
+    </div>
+    <script>
+        function filterLogs() {
+            const searchInput = document.getElementById('logSearch');
+            let regex;
+            try {
+                regex = new RegExp(searchInput.value, 'i');
+            } catch (e) {
+                regex = null;
+            }
+            const logContainers = document.querySelectorAll('.log-container');
+            let matchCount = 0;
+            logContainers.forEach(container => {
+                const logLines = container.querySelectorAll('[data-log-line]');
+                let containerHasMatch = false;
+                logLines.forEach(line => {
+                    const pre = line.querySelector('.log-content');
+                    const text = pre.textContent;
+                    if (regex && regex.source !== "(?:)" && regex.test(text)) {
+                        line.style.display = '';
+                        pre.innerHTML = text.replace(regex, match => '<span class="highlight">' + match + '</span>');
+                        containerHasMatch = true;
+                        matchCount++;
+                    } else if (!searchInput.value) {
+                        line.style.display = '';
+                        pre.innerHTML = text;
+                        containerHasMatch = true;
+                    } else {
+                        line.style.display = 'none';
+                        pre.innerHTML = text;
+                    }
+                });
+                container.style.display = containerHasMatch ? '' : 'none';
+            });
+            document.getElementById('matchCount').textContent = matchCount;
+            // Sauvegarde du filtre dans localStorage
+            localStorage.setItem('logSearchFilter', searchInput.value);
+        }
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        window.addEventListener('load', function() {
+            const searchInput = document.getElementById('logSearch');
+            // Restaure le filtre depuis localStorage
+            const savedFilter = localStorage.getItem('logSearchFilter');
+            if (savedFilter) {
+                searchInput.value = savedFilter;
+            }
+            searchInput.addEventListener('input', debounce(filterLogs, 200));
+            filterLogs();
+        });
+        function toggleJsonView(btn) {
+            // Find the .log-line block that follows the header
+            const logLine = btn.closest('.log-header').nextElementSibling;
+            if (!logLine) return;
+            const raw = logLine.querySelector('.raw-view');
+            const formatted = logLine.querySelector('.formatted-view');
+            if (raw && formatted) {
+                if (raw.style.display !== 'none') {
+                    raw.style.display = 'none';
+                    formatted.style.display = 'block';
+                    btn.textContent = 'Show raw';
+                } else {
+                    raw.style.display = 'block';
+                    formatted.style.display = 'none';
+                    btn.textContent = 'Show formatted';
+                }
+            }
+        }
+    </script>
+</body>
+</html>
