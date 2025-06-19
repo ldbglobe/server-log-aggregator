@@ -74,6 +74,9 @@
             background: #bee3f8;
             border-color: #3182ce;
         }
+        .api-link { display: inline-flex; align-items: center; gap: 0.5em; background: #2c5282; color: white; text-decoration: none; padding: 0.5em 1em; border-radius: 4px; font-weight: 500; transition: background-color 0.2s; }
+        .api-link:hover { background: #2b6cb0; }
+        .api-link i { font-size: 0.9em; }
     </style>
 </head>
 <body>
@@ -91,6 +94,9 @@
                 {{/isLast}}
             {{/breadcrumbs}}
         </div>
+        <a href="{{apiUrl}}" class="api-link">
+            <i class="fas fa-code"></i>JSON
+        </a>
     </div>
     <div class="server-legend">
         {{#serverInfos}}

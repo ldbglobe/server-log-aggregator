@@ -17,7 +17,7 @@ module.exports = () => {
             isLast: link.isLast
         }));
         const serverHeaders = Object.entries(servers).map(([id, server]) => server.label);
-        const apiUrl = `/api/path/${serverKey}/${LogService.normalizePath(path)}`;
+        const apiUrl = `/api/${serverKey}/path/${LogService.normalizePath(path)}`;
         const rootUrl = LogService.buildPathUrl('', '', serverKey);
         // Préparation des lignes du tableau
         const entries = data.map(entry => {

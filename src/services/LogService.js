@@ -94,8 +94,8 @@ class LogService {
     static buildRawUrl(serverId, basePath, itemPath, serverGroup='') {
         const normalizedBase = this.normalizePath(basePath);
         const normalizedItem = this.normalizePath(itemPath);
-        let url = `/api/raw/`;
-        if (serverGroup) url += serverGroup + '/';
+        let url = `/api/`;
+        if (serverGroup) url += serverGroup + '/raw/';
         url += `${serverId}/` + normalizedBase + normalizedItem;
         return url;
     }

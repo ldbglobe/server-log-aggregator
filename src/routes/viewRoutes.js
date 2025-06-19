@@ -40,6 +40,7 @@ module.exports = () => {
                 isLast: link.isLast
             }));
             const rootUrl = LogService.buildPathUrl('', '', serverKey);
+            const apiUrl = `/api/${serverKey}/view/${LogService.normalizePath(path)}`;
             // Calcul du nombre total de lignes par serveur
             const lineCountsByServer = {};
             logs.forEach(log => {
@@ -93,6 +94,7 @@ module.exports = () => {
             res.render('view', {
                 serverKey,
                 rootUrl,
+                apiUrl,
                 breadcrumbs,
                 serverInfos,
                 logs: logsForView

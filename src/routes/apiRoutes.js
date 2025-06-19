@@ -3,7 +3,7 @@ const router = express.Router();
 const LogService = require('../services/LogService');
 
 module.exports = () => {
-    router.get('/path/:serverGroup/*', async (req, res) => {
+    router.get('/:serverGroup/path/*', async (req, res) => {
         const logService = req.logService;
         const path = req.params[0];
         try {
@@ -15,7 +15,7 @@ module.exports = () => {
         }
     });
 
-    router.get('/view/:serverGroup/*', async (req, res) => {
+    router.get('/:serverGroup/view/*', async (req, res) => {
         const logService = req.logService;
         const path = req.params[0];
         if (!path) {
@@ -35,7 +35,7 @@ module.exports = () => {
         }
     });
 
-    router.get('/raw/:serverGroup/:serverId/*', async (req, res) => {
+    router.get('/:serverGroup/raw/:serverId/*', async (req, res) => {
         const logService = req.logService;
         const serverId = req.params.serverId;
         const filePath = req.params[0];
@@ -54,7 +54,7 @@ module.exports = () => {
         }
     });
 
-    router.get('/scan/:serverGroup/*', async (req, res) => {
+    router.get('/:serverGroup/scan/*', async (req, res) => {
         const logService = req.logService;
         const path = req.params[0];
         if (!path) {
