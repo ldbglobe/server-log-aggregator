@@ -302,6 +302,7 @@ class LogService {
             });
             result.push(entry);
         }
+        result.sort((a, b) => a.name.localeCompare(b.name));
         return result;
     }
 
