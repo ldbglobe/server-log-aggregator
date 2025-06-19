@@ -6,6 +6,7 @@ const LogService = require('./services/LogService');
 const config = require('./config');
 const chalk = require('chalk').default; // Import chalk for colored output
 const cookieParser = require('cookie-parser');
+const openurl = require('openurl');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -52,10 +53,18 @@ app.use('/view', require('./routes/viewRoutes')());
 app.use('/api', require('./routes/apiRoutes')());
 app.use('/', require('./routes/indexRoutes')(config.servers, config.selectedserverKey));
 
+// You cannot directly detect browser close from the server side.
+// To gracefully handle server shutdown (e.g., on CTRL+C), use:
+process.on('SIGINT', () => {
+    console.log(chalk.red('\nServer shutting down...'));
+    process.exit();
+});
 
 app.listen(port, () => {
     // Log the server start message with colored output
     console.log(chalk.green(`Server started at ${chalk.underline(`http://localhost:${port}`)}`));
     // Press CTRL+C to stop the server
     console.log(chalk.yellow('Press CTRL+C to stop the server.'));
+    openurl.open(`http://localhost:${port}`);
 });
+
