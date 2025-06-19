@@ -50,8 +50,8 @@ module.exports = () => {
                     }
                 } else {
                     const serverId = 'unknown';
-                serverLineCounts[serverId] = (serverLineCounts[serverId] || 0) + 1 + log.additionalLines.length;
-            }
+                    serverLineCounts[serverId] = (serverLineCounts[serverId] || 0) + 1 + log.additionalLines.length;
+                }
             }
             
             let html = `
@@ -99,6 +99,10 @@ module.exports = () => {
                         padding: 0.5em;
                         border-bottom: 1px solid #e2e8f0;
                         border-left: 4px solid transparent;
+                        display: flex;
+                        flex-direction: row;
+                        flex-wrap: wrap;
+                        align-items: stretch;
                     }
                     .log-entry:last-child {
                         border-bottom: none;
@@ -367,6 +371,24 @@ module.exports = () => {
                     </div>
             `;
 
+            const formatContent = (content) => {
+                try {
+                    // Detect if content is JSON (object or array)
+                    const trimmed = content.trim();
+                    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+                        (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+                        const parsed = JSON.parse(trimmed);
+                        if(parsed && typeof parsed === 'object') {
+                            // Format JSON with indentation
+                            return JSON.stringify(parsed, null, 2);
+                        }
+                    }
+                } catch (e) {
+                    // Not JSON, fall through
+                }
+                return content;
+            }
+
             for (const log of logs) {
                 // Join all serverIds for CSS class, fallback to 'unknown'
                 const serverClass = (log.servers && log.servers.length > 0) ? log.servers.join(' ') : 'unknown';
@@ -381,12 +403,12 @@ module.exports = () => {
                         `).join('')}
                         <div class="content">
                             <span class="line-number">L${log.lineNumber}</span>
-                            <span class="line-content">${log.content}</span>
+                            <span class="line-content">${formatContent(log.content)}</span>
                         </div>
                         ${log.additionalLines.length > 0 ? log.additionalLines.map(line => `
                             <div class="additional-line">
                                 <span class="line-number">L${line.lineNumber}</span>
-                                <span class="line-content">${line.content}</span>
+                                <span class="line-content">${formatContent(line.content)}</span>
                             </div>
                         `).join('') : ''}
                     </div>
