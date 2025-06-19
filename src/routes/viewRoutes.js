@@ -253,8 +253,42 @@ module.exports = () => {
                         background-color: #fff3cd;
                         border-color: #ffeeba;
                     }
+                    .fold-btn, .fold-all-btn {
+                        cursor: pointer;
+                        background: #e2e8f0;
+                        border: none;
+                        border-radius: 4px;
+                        padding: 0.2em 0.7em;
+                        margin-right: 0.7em;
+                        font-size: 1em;
+                        color: #2c5282;
+                        transition: background 0.15s, color 0.15s;
+                        outline: none;
+                        box-shadow: 0 1px 2px rgba(44,82,130,0.04);
+                    }
+                    .fold-btn:hover, .fold-btn:focus {
+                        background: #bee3f8;
+                        color: #2b6cb0;
+                    }
+                    .fold-content {
+                        flex: 1;
+                    }
+                    .fold-content.folded {
+                        max-height: 4em;
+                        overflow: hidden;
+                    }
+                    .fold-content.folded .line-content {
+                        white-space: normal;
+                    }
                 </style>
                 <script>
+                    function toggleFold(id) {
+                        const entry = document.getElementById(id);
+                        const foldContent = entry.querySelector('.fold-content');
+                        const btn = entry.querySelector('.fold-btn');
+                        foldContent.classList.toggle('folded');
+                        btn.textContent = foldContent.classList.contains('folded') ? '+' : '−';
+                    }
                     function filterLogs() {
                         const searchInput = document.getElementById('logSearch');
                         const searchRegex = new RegExp(searchInput.value, 'i');
@@ -369,6 +403,16 @@ module.exports = () => {
                             </div>
                         `).join('')}
                     </div>
+                    <div style="margin-bottom: 1em; display: flex; gap: 1em;">
+                        <button class="fold-all-btn" onclick="
+                            document.querySelectorAll('.fold-content').forEach(fc => fc.classList.add('folded'));
+                            document.querySelectorAll('.fold-btn').forEach(btn => btn.textContent = '+');
+                        ">Fold All</button>
+                        <button class="fold-all-btn" onclick="
+                            document.querySelectorAll('.fold-content').forEach(fc => fc.classList.remove('folded'));
+                            document.querySelectorAll('.fold-btn').forEach(btn => btn.textContent = '−');
+                        ">Unfold All</button>
+                    </div>
             `;
 
             const formatContent = (content) => {
@@ -389,35 +433,41 @@ module.exports = () => {
                 return content;
             }
 
-            for (const log of logs) {
+            for (const [i, log] of logs.entries()) {
+                const logId = `log-entry-${i}`;
                 // Join all serverIds for CSS class, fallback to 'unknown'
                 const serverClass = (log.servers && log.servers.length > 0) ? log.servers.join(' ') : 'unknown';
                 // Optionally, display all serverIds in the UI as well
                 const serverDisplay = (log.servers && log.servers.length > 0) ? log.servers.join(',') : 'unknown';
                 // Create HTML for each log entry
                 html += `
-                    <div class="log-entry ${serverClass}">
-                        <div class="header">${formatTimestamp(log.timestamp)} [${serverDisplay}]</div>
+                    <div class="log-entry ${serverClass}" id="${logId}">
+                        <div class="header">
+                            <button class="fold-btn" onclick="toggleFold('${logId}')">−</button>
+                            ${formatTimestamp(log.timestamp)} [${serverDisplay}]
+                        </div>
                         ${log.servers.map(serverId => `
                             <div class="server-colored-line ${serverId}"></div>
                         `).join('')}
-                        <div class="content">
-                            <span class="line-number">L${log.lineNumber}</span>
-                            <span class="line-content">${formatContent(log.content)}</span>
-                        </div>
-                        ${log.additionalLines.length > 0 ? log.additionalLines.map(line => `
-                            <div class="additional-line">
-                                <span class="line-number">L${line.lineNumber}</span>
-                                <span class="line-content">${formatContent(line.content)}</span>
+                        <div class="fold-content">
+                            <div class="content">
+                                <span class="line-number">L${log.lineNumber}</span>
+                                <span class="line-content">${formatContent(log.content)}</span>
                             </div>
-                        `).join('') : ''}
+                            ${log.additionalLines.length > 0 ? log.additionalLines.map(line => `
+                                <div class="additional-line">
+                                    <span class="line-number">L${line.lineNumber}</span>
+                                    <span class="line-content">${formatContent(line.content)}</span>
+                                </div>
+                            `).join('') : ''}
+                        </div>
                     </div>
                 `;
             }
 
             html += `
                 </div>
-            </body>
+                </body>
             </html>
             `;
             res.send(html);
