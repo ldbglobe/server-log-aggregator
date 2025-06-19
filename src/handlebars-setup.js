@@ -9,6 +9,6 @@ const port = process.env.PORT || 3000;
 // Handlebars view engine setup
 app.engine('hbs', expressHandlebars.engine({ extname: '.hbs', defaultLayout: false }));
 app.set('view engine', 'hbs');
-app.set('views', path.join(__dirname, '../views'));
+app.set('views', path.join(__dirname, 'views'));
 
 // ...existing code...
