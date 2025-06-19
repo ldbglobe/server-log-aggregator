@@ -24,6 +24,7 @@ module.exports = () => {
         const servers = req.selectedServers;
         const logService = req.logService;
         const path = req.params[0];
+        console.log(`Fetching logs for path: ${path} in server group: ${serverKey}`);
         if (!path) {
             return res.status(400).send('Path not specified');
         }
@@ -35,10 +36,10 @@ module.exports = () => {
             const sensitiveData = logService.scanForSensitiveData(logs);
             const breadcrumbs = LogService.buildBreadcrumbs(path).map(link => ({
                 name: link.name,
-                url: LogService.buildPathUrl(link.path, serverKey),
+                url: LogService.buildPathUrl(link.path, '', serverKey),
                 isLast: link.isLast
             }));
-            const rootUrl = LogService.buildPathUrl('', serverKey);
+            const rootUrl = LogService.buildPathUrl('', '', serverKey);
             // Calcul du nombre total de lignes par serveur
             const lineCountsByServer = {};
             logs.forEach(log => {
@@ -78,20 +79,19 @@ module.exports = () => {
                     } catch (e) {}
                     return { raw, formatted, isJson };
                 });
+                let isJson = lines.some(line => line.isJson);
                 return {
                     servers: serversForLog,
                     lineNumber: log.lineNumber,
                     timestamp: log.timestamp ? formatTimestamp(log.timestamp) : '',
                     lineCount: lines.length,
+                    isJson,
                     lines,
                     sensitive: sensitiveData.some(item => item.lineNumber === log.lineNumber && serversForLog.some(s => s.label === item.label)),
                 };
             });
-            // Ajout du label du groupe de serveurs sélectionné
-            const serverGroupLabel = config.servers && serverKey && config.servers[serverKey] ? serverKey : '';
             res.render('view', {
                 serverKey,
-                serverGroupLabel,
                 rootUrl,
                 breadcrumbs,
                 serverInfos,

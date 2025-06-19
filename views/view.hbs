@@ -15,7 +15,7 @@
         .log-container { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.07); padding: 1.5em; margin-bottom: 2em; }
         .log-header { font-weight: bold; color: #2c5282; margin-bottom: 0.5em; display: flex; align-items: center; gap: 1em; }
         .log-line { display: flex; align-items: flex-start; }
-        .log-content { font-family: monospace; font-size: 1em; background: #f7fafc; border-radius: 4px; padding: 0.5em 1em; overflow-x: auto; white-space: pre-wrap; }
+        .log-content { font-family: monospace; font-size: 1em; background: #f7fafc; border-radius: 4px; padding: 0.5em 1em; overflow-x: auto; white-space: pre-wrap; margin:0; }
         .sensitive { background: #fffbe6; color: #b59a00; padding: 0.2em 0.4em; border-radius: 3px; font-weight: bold; }
         .server-label { font-weight: bold; padding: 0.2em 0.7em; border-radius: 4px; color: #fff; display: inline-block; }
         .line-number { color: #718096; font-size: 0.95em; font-family: monospace; background: #edf2f7; padding: 0.2em 0.5em; border-radius: 3px; margin-right: 0.5em; }
@@ -46,15 +46,41 @@
             color: #e2e8f0;
         }
         .log-header span:last-child { margin-left: 0.5em; }
+        .server-filter-btn {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 0.3em 0.7em;
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .server-filter-btn:hover {
+            background: #e2e8f0;
+        }
+        .server-color {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        .log-container[data-filter-server="false"],
+        .log-container[data-filter-text="false"] {
+            display: none !important;
+        }
+        .server-filter-btn.active {
+            background: #bee3f8;
+            border-color: #3182ce;
+        }
     </style>
 </head>
 <body>
     <div class="header-container">
         <div class="breadcrumb">
-            {{#serverGroupLabel}}
-                <a href="/" class="server-key"><i class="fas fa-server"></i>{{serverGroupLabel}}</a> /
-            {{/serverGroupLabel}}
-            <a href="{{rootUrl}}"><i class="fas fa-home"></i>Root</a>
+            <a href="/" class="server-key"><i class="fas fa-server"></i></a> /
+            <a href="{{rootUrl}}"><i class="fas fa-home"></i>{{serverKey}}</a>
             {{#breadcrumbs}}
                 <span class="separator">/</span>
                 {{#isLast}}
@@ -68,10 +94,14 @@
     </div>
     <div class="server-legend">
         {{#serverInfos}}
-            <div class="server-legend-item">
-                <span class="server-label" style="background: {{color}}">{{label}}</span>
+            <button class="server-legend-item server-filter-btn" 
+                style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 0.3em 0.7em; display: flex; align-items: center; gap: 0.5em; cursor: pointer; transition: background 0.2s;"
+                data-server-id="{{id}}">
+                <span class="server-color" style="background: {{color}}"></span>
+                <span>{{label}}</span>
                 <span style="color:#888; font-size:0.95em;">({{lineCount}} lignes)</span>
-            </div>
+                <span class="filter-state" style="margin-left:0.5em; color:#3182ce; font-size:0.95em; display:none;">Filtre actif</span>
+            </button>
         {{/serverInfos}}
     </div>
     <div class="search-container">
@@ -81,24 +111,24 @@
     <div id="logs-list">
     {{#logs}}
         <div class="log-container">
+            <div class="log-header" style="display: flex; align-items: center;">
+                {{#servers}}
+                    <span class="server-label" style="background: {{color}}" data-server-id="{{id}}">{{label}}</span>
+                {{/servers}}
+                <span class="line-number">L{{lineNumber}}</span>
+                <span class="timestamp">{{timestamp}}</span>
+                <span>({{lineCount}} lines)</span>
+                {{#isJson}}
+                    <button class="toggle-json-btn" onclick="toggleJsonView(this)">Show formatted</button>
+                {{/isJson}}
+            </div>
             {{#lines}}
-                <div class="log-header" style="display: flex; align-items: center;">
-                    {{#../servers}}
-                        <span class="server-label" style="background: {{color}}">{{label}}</span>
-                    {{/../servers}}
-                    <span class="line-number">L{{../lineNumber}}</span>
-                    <span class="timestamp">{{../timestamp}}</span>
-                    <span>({{../lineCount}} lines)</span>
-                    {{#isJson}}
-                        <button class="toggle-json-btn" onclick="toggleJsonView(this)">Show formatted</button>
-                    {{/isJson}}
-                </div>
-                <div class="log-line" data-log-line>
-                    <pre class="log-content raw-view" style="display:block;">{{{raw}}}</pre>
-                    {{#isJson}}
-                        <pre class="log-content formatted-view" style="display:none;">{{{formatted}}}</pre>
-                    {{/isJson}}
-                </div>
+            <div class="log-line" data-log-line>
+                <pre class="log-content raw-view" style="display:block;">{{{raw}}}</pre>
+                {{#isJson}}
+                    <pre class="log-content formatted-view" style="display:none;">{{{formatted}}}</pre>
+                {{/isJson}}
+            </div>
             {{/lines}}
             {{#sensitive}}
                 <div class="sensitive">Sensitive data detected!</div>
@@ -107,42 +137,85 @@
     {{/logs}}
     </div>
     <script>
-        function filterLogs() {
-            const searchInput = document.getElementById('logSearch');
-            let regex;
-            try {
-                regex = new RegExp(searchInput.value, 'i');
-            } catch (e) {
-                regex = null;
-            }
-            const logContainers = document.querySelectorAll('.log-container');
+        let activeServerFilter = null;
+        let activeTextFilter = '';
+
+        function applyLogFilters() {
+            const regex = (() => {
+                try {
+                    return activeTextFilter ? new RegExp(activeTextFilter, 'i') : null;
+                } catch (e) { return null; }
+            })();
             let matchCount = 0;
-            logContainers.forEach(container => {
-                const logLines = container.querySelectorAll('[data-log-line]');
-                let containerHasMatch = false;
-                logLines.forEach(line => {
-                    const pre = line.querySelector('.log-content');
-                    const text = pre.textContent;
-                    if (regex && regex.source !== "(?:)" && regex.test(text)) {
-                        line.style.display = '';
-                        pre.innerHTML = text.replace(regex, match => '<span class="highlight">' + match + '</span>');
-                        containerHasMatch = true;
-                        matchCount++;
-                    } else if (!searchInput.value) {
-                        line.style.display = '';
-                        pre.innerHTML = text;
-                        containerHasMatch = true;
-                    } else {
-                        line.style.display = 'none';
-                        pre.innerHTML = text;
+            document.querySelectorAll('.log-container').forEach(container => {
+                // Filtre serveur
+                let hasServer = true;
+                if (activeServerFilter) {
+                    hasServer = Array.from(container.querySelectorAll('.server-label')).some(lbl => lbl.getAttribute('data-server-id') === activeServerFilter);
+                }
+                container.setAttribute('data-filter-server', hasServer ? 'true' : 'false');
+                // Filtre texte
+                let hasText = false;
+                if (regex) {
+                    const lines = container.querySelectorAll('[data-log-line] .log-content');
+                    for (const pre of lines) {
+                        const text = pre.textContent;
+                        if (regex.test(text)) {
+                            hasText = true;
+                            pre.innerHTML = text.replace(regex, match => '<span class="highlight">' + match + '</span>');
+                        } else {
+                            pre.innerHTML = text;
+                        }
                     }
-                });
-                container.style.display = containerHasMatch ? '' : 'none';
+                } else if (!activeTextFilter) {
+                    hasText = true;
+                    container.querySelectorAll('[data-log-line] .log-content').forEach(pre => {
+                        pre.innerHTML = pre.textContent;
+                    });
+                }
+                container.setAttribute('data-filter-text', hasText ? 'true' : 'false');
+                if (hasServer && hasText) matchCount++;
             });
             document.getElementById('matchCount').textContent = matchCount;
-            // Sauvegarde du filtre dans localStorage
-            localStorage.setItem('logSearchFilter', searchInput.value);
         }
+
+        // Init boutons serveur
+        document.querySelectorAll('.server-filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const serverId = this.getAttribute('data-server-id');
+                if (activeServerFilter === serverId) {
+                    activeServerFilter = null;
+                    this.classList.remove('active');
+                } else {
+                    activeServerFilter = serverId;
+                    document.querySelectorAll('.server-filter-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                }
+                applyLogFilters();
+            });
+        });
+
+        function updateServerFilterState() {
+            document.querySelectorAll('.server-filter-btn').forEach(btn => {
+                const state = btn.querySelector('.filter-state');
+                if (btn.classList.contains('active')) {
+                    state.style.display = '';
+                } else {
+                    state.style.display = 'none';
+                }
+            });
+        }
+        // Ajout à la fin de chaque click serveur
+        document.querySelectorAll('.server-filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // ...existing code...
+                updateServerFilterState();
+            });
+        });
+        // Initial update on load
+        updateServerFilterState();
+
+        // Init filtre texte
         function debounce(func, wait) {
             let timeout;
             return function executedFunction(...args) {
@@ -160,9 +233,14 @@
             const savedFilter = localStorage.getItem('logSearchFilter');
             if (savedFilter) {
                 searchInput.value = savedFilter;
+                activeTextFilter = savedFilter;
             }
-            searchInput.addEventListener('input', debounce(filterLogs, 200));
-            filterLogs();
+            searchInput.addEventListener('input', debounce(function() {
+                activeTextFilter = searchInput.value;
+                localStorage.setItem('logSearchFilter', activeTextFilter);
+                applyLogFilters();
+            }, 200));
+            applyLogFilters();
         });
         function toggleJsonView(btn) {
             // Find the .log-line block that follows the header

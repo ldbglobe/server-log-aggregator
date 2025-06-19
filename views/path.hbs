@@ -54,8 +54,8 @@
 <body>
     <div class="header-container">
         <div class="breadcrumb">
-            {{#serverKey}}<a href="/" class="server-key">{{serverKey}}</a> / {{/serverKey}}
-            <a href="{{rootUrl}}"><i class="fas fa-home"></i>Root</a>
+            <a href="/" class="server-key"><i class="fas fa-server"></i></a> /
+            <a href="{{rootUrl}}"><i class="fas fa-home"></i>{{serverKey}}</a>
             {{#breadcrumbs}}
                 <span class="separator">/</span>
                 {{#isLast}}

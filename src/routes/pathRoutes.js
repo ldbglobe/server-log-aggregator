@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const LogService = require('../services/LogService');
+const config = require('../config');
 
 module.exports = () => {
     router.get('/:serverGroup/*', async (req, res) => {
@@ -12,12 +13,12 @@ module.exports = () => {
         const largeFileSizeThreshold = 5;
         const breadcrumbs = LogService.buildBreadcrumbs(path).map(link => ({
             name: link.name,
-            url: LogService.buildPathUrl(link.path, serverKey),
+            url: LogService.buildPathUrl(link.path, '', serverKey),
             isLast: link.isLast
         }));
         const serverHeaders = Object.entries(servers).map(([id, server]) => server.label);
         const apiUrl = `/api/path/${serverKey}/${LogService.normalizePath(path)}`;
-        const rootUrl = LogService.buildPathUrl('', serverKey);
+        const rootUrl = LogService.buildPathUrl('', '', serverKey);
         // Préparation des lignes du tableau
         const entries = data.map(entry => {
             const isSync = Object.keys(servers).every(serverId => entry[serverId]);

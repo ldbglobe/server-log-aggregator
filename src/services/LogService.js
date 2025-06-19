@@ -75,6 +75,7 @@ class LogService {
     static buildPathUrl(basePath='', itemPath='', serverGroup='') {
         const normalizedBase = this.normalizePath(basePath);
         const normalizedItem = this.normalizePath(itemPath);
+        console.log(`[DEBUG] buildPathUrl - Base: ${normalizedBase}, Item: ${normalizedItem}, ServerGroup: ${serverGroup}`);
         let url = '/path/';
         if (serverGroup) url += serverGroup + '/';
         url += normalizedBase + normalizedItem;
@@ -106,6 +107,7 @@ class LogService {
         return parts.map((part, index) => {
             const currentPath = parts.slice(0, index + 1).join('/');
             const isLast = index === parts.length - 1;
+            console.log(`[DEBUG] buildBreadcrumbs - Part: ${part}, Current Path: ${currentPath}, Is Last: ${isLast}`);
             return {
                 name: part,
                 path: currentPath + (isLast ? '' : '/'),
@@ -464,10 +466,8 @@ class LogService {
                     additionalLines: []
                 };
             } else if (currentLog) {
-                currentLog.additionalLines.push({
-                    content: line,
-                    lineNumber
-                });
+                // we just
+                currentLog.additionalLines.push(line);
             }
             lineNumber++;
         }
