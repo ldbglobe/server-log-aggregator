@@ -388,15 +388,24 @@ class LogService {
         let lineNumber = 1;
 
         for (const line of lines) {
-            const timestamp = this.extractTimestamp(line);
+            let timestamp = this.extractTimestamp(line);
 
             if (!line.trim()) {
                 lineNumber++;
                 continue;
             }
 
-            // Regex pour extraire le timestamp dans les différents formats
-            
+            if(!currentLog && !timestamp) {
+                logs.push({
+                    timestamp: null,
+                    content: line,
+                    server,
+                    label,
+                    color,
+                    lineNumber,
+                    additionalLines: []
+                });
+            }                
             
             if (timestamp) {
                 if (currentLog) {
