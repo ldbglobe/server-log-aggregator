@@ -52,7 +52,7 @@ class LogService {
     static isLogFileType(filename) {
         if (!filename) return false;
         if (this.isBinaryOrNonLogFile(filename)) return false;
-        const logExtensions = ['.log', '.gz'];
+        const logExtensions = ['.log', '.raw', '.gz'];
         return logExtensions.some(ext => filename.toLowerCase().replace(/\.[\d-]+$/,'').endsWith(ext));
     }
 
