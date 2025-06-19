@@ -307,8 +307,21 @@ class LogService {
         // 2025-05-27
         // 2025-05-27 03:00:02.638
         // 2025-05-27 03:00:02 
-        const timestampRegex = /(?:\[)?(\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}:\d{2}(?:\.\d{3})?)?)(?:\])?/;
-        const match = line.trim().match(timestampRegex);
+        const dateRegex = [
+            // ISO
+            /^[^{]+(?:\[)?(\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}:\d{2}(?:\.\d{3})?)?)(?:\])?/,
+            // DATALAKE TRANSACTION OBJECT
+            /"receivedAt":"(?:\[)?(\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}:\d{2}(?:\.\d{3})?)?)(?:\])?.","storeId"/
+        ]
+        let match = null;
+        for(let i in dateRegex){
+            let regex = dateRegex[i];
+            match = line.trim().match(regex);
+            if (match) {
+                break;
+            }
+        }
+
         if (match) {
             const [_, timestamp] = match;
             // Normalize the timestamp to a proper ISO 8601 format
