@@ -72,24 +72,30 @@ class LogService {
         return normalized;
     }
 
-    static buildPathUrl(basePath='', itemPath='') {
+    static buildPathUrl(basePath='', itemPath='', serverGroup='') {
         const normalizedBase = this.normalizePath(basePath);
         const normalizedItem = this.normalizePath(itemPath);
-        let url = '/path/' + normalizedBase + normalizedItem;
+        let url = '/path/';
+        if (serverGroup) url += serverGroup + '/';
+        url += normalizedBase + normalizedItem;
         return url;
     }
 
-    static buildViewUrl(basePath, itemPath) {
+    static buildViewUrl(basePath, itemPath, serverGroup='') {
         const normalizedBase = this.normalizePath(basePath);
         const normalizedItem = this.normalizePath(itemPath);
-        let url = '/view/' + normalizedBase + normalizedItem;
+        let url = '/view/';
+        if (serverGroup) url += serverGroup + '/';
+        url += normalizedBase + normalizedItem;
         return url;
     }
 
-    static buildRawUrl(serverId, basePath, itemPath) {
+    static buildRawUrl(serverId, basePath, itemPath, serverGroup='') {
         const normalizedBase = this.normalizePath(basePath);
         const normalizedItem = this.normalizePath(itemPath);
-        let url = `/api/raw/${serverId}/${normalizedBase}${normalizedItem}`;
+        let url = `/api/raw/`;
+        if (serverGroup) url += serverGroup + '/';
+        url += `${serverId}/` + normalizedBase + normalizedItem;
         return url;
     }
 
@@ -395,7 +401,13 @@ class LogService {
         }
         console.log(`[DEBUG] fetchFileContent - Nombre total de logs récupérés: ${dedupedLogs.length}`);
 
-        return dedupedLogs.sort((a, b) => a.server === b.server ? 0 : a.timestamp - b.timestamp);
+        // Tri global par timestamp (nulls à la fin)
+        return dedupedLogs.sort((a, b) => {
+            if (!a.timestamp && !b.timestamp) return 0;
+            if (!a.timestamp) return 1;
+            if (!b.timestamp) return -1;
+            return a.timestamp - b.timestamp;
+        });
     }
 
     __buildHash(log) {

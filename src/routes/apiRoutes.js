@@ -3,9 +3,7 @@ const router = express.Router();
 const LogService = require('../services/LogService');
 
 module.exports = () => {
-    router.get('/path/*', async (req, res) => {
-        const servers = req.selectedServers;
-        const serverKey = req.selectedserverKey;
+    router.get('/path/:serverGroup/*', async (req, res) => {
         const logService = req.logService;
         const path = req.params[0];
         try {
@@ -17,9 +15,7 @@ module.exports = () => {
         }
     });
 
-    router.get('/view/*', async (req, res) => {
-        const servers = req.selectedServers;
-        const serverKey = req.selectedserverKey;
+    router.get('/view/:serverGroup/*', async (req, res) => {
         const logService = req.logService;
         const path = req.params[0];
         if (!path) {
@@ -39,9 +35,7 @@ module.exports = () => {
         }
     });
 
-    router.get('/raw/:serverId/*', async (req, res) => {
-        const servers = req.selectedServers;
-        const serverKey = req.selectedserverKey;
+    router.get('/raw/:serverGroup/:serverId/*', async (req, res) => {
         const logService = req.logService;
         const serverId = req.params.serverId;
         const filePath = req.params[0];
@@ -60,9 +54,7 @@ module.exports = () => {
         }
     });
 
-    router.get('/scan/*', async (req, res) => {
-        const servers = req.selectedServers;
-        const serverKey = req.selectedserverKey;
+    router.get('/scan/:serverGroup/*', async (req, res) => {
         const logService = req.logService;
         const path = req.params[0];
         if (!path) {

@@ -19,9 +19,9 @@ function formatTimestamp(date) {
 }
 
 module.exports = () => {
-    router.get('/*', async (req, res) => {
+    router.get('/:serverGroup/*', async (req, res) => {
+        const serverKey = req.params.serverGroup;
         const servers = req.selectedServers;
-        const serverKey = req.selectedserverKey;
         const logService = req.logService;
         const path = req.params[0];
         if (!path) {
@@ -35,15 +35,25 @@ module.exports = () => {
             const sensitiveData = logService.scanForSensitiveData(logs);
             const breadcrumbs = LogService.buildBreadcrumbs(path).map(link => ({
                 name: link.name,
-                url: LogService.buildPathUrl(link.path),
+                url: LogService.buildPathUrl(link.path, serverKey),
                 isLast: link.isLast
             }));
-            const rootUrl = LogService.buildPathUrl();
-            // Préparation des couleurs et labels des serveurs
+            const rootUrl = LogService.buildPathUrl('', serverKey);
+            // Calcul du nombre total de lignes par serveur
+            const lineCountsByServer = {};
+            logs.forEach(log => {
+                if (Array.isArray(log.servers)) {
+                    log.servers.forEach(id => {
+                        lineCountsByServer[id] = (lineCountsByServer[id] || 0) + 1;
+                    });
+                }
+            });
+            // Préparation des couleurs, labels et nombre de lignes des serveurs
             const serverInfos = Object.entries(servers).map(([id, srv]) => ({
                 id,
                 label: srv.label,
-                color: srv.color || '#ccc'
+                color: srv.color || '#ccc',
+                lineCount: lineCountsByServer[id] || 0
             }));
             // Préparation des logs pour le template
             const logsForView = logs.map(log => {

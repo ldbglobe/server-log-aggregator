@@ -23,21 +23,17 @@ app.use(cookieParser());
 
 // Middleware to determine selected server group
 app.use((req, res, next) => {
-    // Priority: query > body > cookie > default
-    let serverKey = req.query.serverKey
-        || req.body?.serverKey
-        || req.cookies?.serverKey
-        || config.selectedserverKey;
-
-    console.log(chalk.blue(`Selected serverKey: ${serverKey}`));
-
-    // Save in cookie for persistence
-    if (serverKey && req.cookies.serverKey !== serverKey) {
-        res.cookie('serverKey', serverKey, { httpOnly: false });
+    // Si l'URL contient un paramètre :serverGroup, on l'utilise
+    const match = req.path.match(/^\/(path|view|api)(\/([^\/]+))/);
+    let serverKey = null;
+    if (match && match[3]) {
+        serverKey = match[3];
+    } else {
+        // fallback: default
+        serverKey = config.selectedserverKey;
     }
-
     req.selectedserverKey = serverKey;
-    req.selectedServers = config.servers[serverKey] || {}
+    req.selectedServers = config.servers[serverKey] || {};
     req.logService = new LogService(req.selectedServers, config.credentials);
     next();
 });

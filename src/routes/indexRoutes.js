@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 
-module.exports = (servers, selectedserverKey) => {
+module.exports = (servers) => {
     router.get('/', (req, res) => {
         const serverGroups = Object.entries(servers).map(([key, group]) => ({
             key,
-            serverLabels: Object.values(group).map(srv => srv.label).join(', ')
+            serverLabels: Object.values(group).map(srv => srv.label).join(', '),
+            url: `/path/${key}/` // Génère le lien avec le group dans l'URL
         }));
-        const selected = req.cookies?.serverKey || selectedserverKey;
-        res.render('index', { serverGroups, selected });
+        res.render('index', { serverGroups });
     });
 
     return router;

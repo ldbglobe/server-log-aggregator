@@ -17,12 +17,11 @@
         .log-line { display: flex; align-items: flex-start; }
         .log-content { font-family: monospace; font-size: 1em; background: #f7fafc; border-radius: 4px; padding: 0.5em 1em; overflow-x: auto; white-space: pre-wrap; }
         .sensitive { background: #fffbe6; color: #b59a00; padding: 0.2em 0.4em; border-radius: 3px; font-weight: bold; }
-        .server-label { font-weight: bold; padding: 0.2em 0.7em; border-radius: 4px; color: #fff; margin-right: 0.5em; display: inline-block; }
+        .server-label { font-weight: bold; padding: 0.2em 0.7em; border-radius: 4px; color: #fff; display: inline-block; }
         .line-number { color: #718096; font-size: 0.95em; font-family: monospace; background: #edf2f7; padding: 0.2em 0.5em; border-radius: 3px; margin-right: 0.5em; }
-        .timestamp { color: #718096; font-size: 0.95em; margin-left: 1em; }
+        .timestamp { color: #718096; font-size: 0.95em; }
         .server-legend { display: flex; gap: 1em; margin-bottom: 1em; padding: 0.5em; background: #f8fafc; border-radius: 4px; }
         .server-legend-item { display: flex; align-items: center; gap: 0.5em; }
-        .server-color { width: 20px; height: 20px; border-radius: 4px; display: inline-block; }
         .highlight { background-color: #fefcbf; border-radius: 2px; padding:2px 0px; }
         .search-container { display: flex; gap: 0.5em; margin-bottom: 1em; align-items: center; }
         .search-input { flex: 1; padding: 0.5em; border: 1px solid #e2e8f0; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
@@ -46,8 +45,6 @@
             background: #2b6cb0;
             color: #e2e8f0;
         }
-        .line-number { color: #718096; font-size: 0.95em; font-family: monospace; background: #edf2f7; padding: 0.2em 0.5em; border-radius: 3px; margin-right: 0.5em; }
-        .timestamp { color: #718096; font-size: 0.95em; margin-left: 1em; }
         .log-header span:last-child { margin-left: 0.5em; }
     </style>
 </head>
@@ -72,8 +69,8 @@
     <div class="server-legend">
         {{#serverInfos}}
             <div class="server-legend-item">
-                <span class="server-color" style="background: {{color}}"></span>
-                <span>{{label}}</span>
+                <span class="server-label" style="background: {{color}}">{{label}}</span>
+                <span style="color:#888; font-size:0.95em;">({{lineCount}} lignes)</span>
             </div>
         {{/serverInfos}}
     </div>

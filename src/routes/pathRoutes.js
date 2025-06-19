@@ -3,21 +3,21 @@ const router = express.Router();
 const LogService = require('../services/LogService');
 
 module.exports = () => {
-    router.get('/*', async (req, res) => {
+    router.get('/:serverGroup/*', async (req, res) => {
+        const serverKey = req.params.serverGroup;
         const servers = req.selectedServers;
-        const serverKey = req.selectedserverKey;
         const logService = req.logService;
         const path = req.params[0] || '';
         const data = await logService.aggregateLogs(path);
         const largeFileSizeThreshold = 5;
         const breadcrumbs = LogService.buildBreadcrumbs(path).map(link => ({
             name: link.name,
-            url: LogService.buildPathUrl(link.path),
+            url: LogService.buildPathUrl(link.path, serverKey),
             isLast: link.isLast
         }));
         const serverHeaders = Object.entries(servers).map(([id, server]) => server.label);
-        const apiUrl = `/api/path/${LogService.normalizePath(path)}`;
-        const rootUrl = LogService.buildPathUrl();
+        const apiUrl = `/api/path/${serverKey}/${LogService.normalizePath(path)}`;
+        const rootUrl = LogService.buildPathUrl('', serverKey);
         // Préparation des lignes du tableau
         const entries = data.map(entry => {
             const isSync = Object.keys(servers).every(serverId => entry[serverId]);
@@ -34,9 +34,9 @@ module.exports = () => {
             const linkClass = isDirectory ? 'folder-link' : 'file-link';
             let nameCellContent;
             if (isDirectory) {
-                nameCellContent = `<a href="${LogService.buildPathUrl(path, entry.name)}" class="${linkClass}"><i class="fas ${icon}"></i>${entry.name}</a>`;
+                nameCellContent = `<a href="${LogService.buildPathUrl(path, entry.name, serverKey)}" class="${linkClass}"><i class="fas ${icon}"></i>${entry.name}</a>`;
             } else if (isLogFile) {
-                nameCellContent = `<a href="#" onclick="handleFileClick('${LogService.buildViewUrl(path, entry.name)}', ${haveLargeFile})" class="${linkClass}"><i class="fas ${icon}"></i>${entry.name}</a>`;
+                nameCellContent = `<a href="#" onclick="handleFileClick('${LogService.buildViewUrl(path, entry.name, serverKey)}', ${haveLargeFile})" class="${linkClass}"><i class="fas ${icon}"></i>${entry.name}</a>`;
             } else {
                 nameCellContent = `<i class="fas ${icon}"></i>${entry.name}`;
             }
@@ -44,7 +44,7 @@ module.exports = () => {
             const serverCells = Object.entries(servers).map(([serverId, server]) => {
                 let directLinkHtml = '';
                 if (!isDirectory) {
-                    directLinkHtml = `<div class="direct-link"><a href="${LogService.buildRawUrl(serverId, path, entry.name)}" target="_blank"><i class="fas fa-external-link-alt"></i></a></div>`;
+                    directLinkHtml = `<div class="direct-link"><a href="${LogService.buildRawUrl(serverId, path, entry.name, serverKey)}" target="_blank"><i class="fas fa-external-link-alt"></i></a></div>`;
                 }
                 let isLargeFile = entry[serverId] && LogService.isFileSizeExceeding(entry[serverId].size, largeFileSizeThreshold);
                 let sizeText = entry[serverId] ? LogService.formatFileSize(entry[serverId].size) : '-';
