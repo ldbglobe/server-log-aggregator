@@ -2,6 +2,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const zlib = require('zlib');
 const { promisify } = require('util');
+const crypto = require('crypto');
 
 const gunzip = promisify(zlib.gunzip);
 
@@ -378,7 +379,38 @@ class LogService {
             this.parseAndSortLogs(result.content, result.server, result.label, result.color)
         );
 
-        return allLogs.sort((a, b) => a.server===b.server ? 0 : a.timestamp - b.timestamp);
+        const dedupedLogs = [];
+        const seenHashes = new Map();
+
+        for (const log of allLogs) {
+            const hash = this.__buildHash(log);
+            if (!seenHashes.has(hash)) {
+            seenHashes.set(hash, log);
+            dedupedLogs.push(log);
+            } else {
+            // Merge servers arrays (avoid duplicates)
+            const existingLog = seenHashes.get(hash);
+            existingLog.servers = Array.from(new Set([...(existingLog.servers || []), ...(log.servers || [])]));
+            }
+        }
+        console.log(`[DEBUG] fetchFileContent - Nombre total de logs récupérés: ${dedupedLogs.length}`);
+
+        return dedupedLogs.sort((a, b) => a.server === b.server ? 0 : a.timestamp - b.timestamp);
+    }
+
+    __buildHash(log) {
+        const hashKey = log.lineNumber + '\n' + (log.timestamp ? log.timestamp.toISOString() : '') +'\n'+ log.content +'\n'+ log.additionalLines.map(l => l.content).join('\n');
+        console.log(`[DEBUG] __buildHash - Clé de hachage: ${hashKey}`);
+        const hash = crypto.createHash('sha256')
+            .update(hashKey)
+            .digest('hex');
+        console.log(`[DEBUG] __buildHash - Hachage généré: ${hash}`);
+        return hash;
+    }
+
+    __addLogToList(logs, log) {
+        logs.push({...log, hash: this.__buildHash(log)});
+        return logs;
     }
 
     parseAndSortLogs(content, server, label, color) {
@@ -396,26 +428,26 @@ class LogService {
             }
 
             if(!currentLog && !timestamp) {
-                logs.push({
+                this.__addLogToList(logs, {
                     timestamp: null,
                     content: line,
-                    server,
+                    servers: [server],
                     label,
                     color,
                     lineNumber,
                     additionalLines: []
                 });
             }                
-            
-            if (timestamp) {
+            else if (timestamp) {
                 if (currentLog) {
                     logs.push(currentLog);
+                    this.__addLogToList(logs, currentLog);
                 }
                 
                 currentLog = {
                     timestamp,
                     content: line,
-                    server,
+                    servers: [server],
                     label,
                     color,
                     lineNumber,
@@ -431,8 +463,10 @@ class LogService {
         }
 
         if (currentLog) {
-            logs.push(currentLog);
+            this.__addLogToList(logs, currentLog);
         }
+
+
 
         return logs;
     }

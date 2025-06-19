@@ -44,8 +44,14 @@ module.exports = () => {
             // Count lines per server
             const serverLineCounts = {};
             for (const log of logs) {
-                const serverId = log.server || 'unknown';
+                if (log.servers && Array.isArray(log.servers) && log.servers.length > 0) {
+                    for (const serverId of log.servers) {
+                        serverLineCounts[serverId] = (serverLineCounts[serverId] || 0) + 1 + log.additionalLines.length;
+                    }
+                } else {
+                    const serverId = 'unknown';
                 serverLineCounts[serverId] = (serverLineCounts[serverId] || 0) + 1 + log.additionalLines.length;
+            }
             }
             
             let html = `
@@ -97,19 +103,23 @@ module.exports = () => {
                     .log-entry:last-child {
                         border-bottom: none;
                     }
+                    .server-colored-line {
+                        width:0;
+                        margin-right:2px;
+                    }
                     ${Object.entries(servers).map(([id, server]) => `
-                        .log-entry.${id} {
-                            border-left-color: ${server.color};
+                        .server-colored-line.${id} {
+                            border-left: 8px solid ${server.color};
                         }
                     `).join('')}
-                    .timestamp { 
+                    .header { 
                         color: #2c5282; 
                         font-weight: bold;
                         margin-bottom: 0.25em;
                         font-family: monospace;
                         display: flex;
                         align-items: center;
-                        gap: 1em;
+                        width: 100%;
                     }
                     .content { 
                         font-family: monospace; 
@@ -117,6 +127,8 @@ module.exports = () => {
                         background: #f8fafc;
                         padding: 0.5em;
                         border-radius: 4px;
+                        overflow-x: auto;
+                        flex: 1;
                     }
                     .additional-line { 
                         font-family: monospace; 
@@ -356,10 +368,17 @@ module.exports = () => {
             `;
 
             for (const log of logs) {
-                const serverClass = log.server || 'unknown';
+                // Join all serverIds for CSS class, fallback to 'unknown'
+                const serverClass = (log.servers && log.servers.length > 0) ? log.servers.join(' ') : 'unknown';
+                // Optionally, display all serverIds in the UI as well
+                const serverDisplay = (log.servers && log.servers.length > 0) ? log.servers.join(',') : 'unknown';
+                // Create HTML for each log entry
                 html += `
                     <div class="log-entry ${serverClass}">
-                        <div class="timestamp">${formatTimestamp(log.timestamp)}</div>
+                        <div class="header">${formatTimestamp(log.timestamp)} [${serverDisplay}]</div>
+                        ${log.servers.map(serverId => `
+                            <div class="server-colored-line ${serverId}"></div>
+                        `).join('')}
                         <div class="content">
                             <span class="line-number">L${log.lineNumber}</span>
                             <span class="line-content">${log.content}</span>
