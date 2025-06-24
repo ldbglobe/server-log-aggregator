@@ -10,7 +10,7 @@ const cookieParser = require('cookie-parser');
 const openurl = require('openurl');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 41240;
 
 // Handlebars view engine setup
 app.engine('hbs', expressHandlebars.engine({ extname: '.hbs', defaultLayout: false }));
