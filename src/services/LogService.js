@@ -303,6 +303,7 @@ class LogService {
             result.push(entry);
         }
         result.sort((a, b) => a.name.localeCompare(b.name));
+        result.sort((a, b) => Number(b.isDirectory) - Number(a.isDirectory)); // Dossiers en premier
         return result;
     }
 
