@@ -68,25 +68,37 @@ module.exports = () => {
                     : [{ id: 'unknown', label: 'unknown', color: '#ccc' }];
                 // Prépare chaque ligne (principale + additionalLines)
                 const allLines = [log.content, ...(log.additionalLines || [])];
-                const lines = allLines.map(raw => {
-                    let isJson = false;
-                    let formatted = raw;
-                    try {
-                        const parsed = JSON.parse(raw);
-                        if (typeof parsed === 'object') {
-                            formatted = JSON.stringify(parsed, null, 2);
-                            isJson = true;
-                        }
-                    } catch (e) {}
-                    return { raw, formatted, isJson };
-                });
-                let isJson = lines.some(line => line.isJson);
+                const lines = allLines.filter(line => line.trim() !== '').reduce((acc, raw) => {
+                    let lastGroup = acc[acc.length - 1];
+                  
+                    let isJson = false
+                    let formatted = null;
+                    if( raw.match(/[[\]{}]/)) {
+                        try {
+                            const parsed = JSON.parse(raw);
+                            if (typeof parsed === 'object') {
+                                formatted = JSON.stringify(parsed, null, 2);
+                                isJson = true;
+                            }
+                        } catch { /**/ }
+                    }
+                    if(!isJson){
+                        raw = String(raw).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    }
+                    if (!lastGroup || isJson || lastGroup.isJson !== isJson) {
+                        acc.push({ isJson, raw, formatted });
+                    }
+                    else {
+                        acc[acc.length - 1].raw += '\n' + raw;
+                    }
+                    return acc;
+                }, []);
                 return {
                     servers: serversForLog,
                     lineNumber: log.lineNumber,
                     timestamp: log.timestamp ? formatTimestamp(log.timestamp) : '',
                     lineCount: lines.length,
-                    isJson,
+                    isJson: lines.some(line => line.isJson),
                     lines,
                     sensitive: sensitiveData.some(item => item.lineNumber === log.lineNumber && serversForLog.some(s => s.label === item.label)),
                 };

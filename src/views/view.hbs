@@ -15,7 +15,7 @@
         .log-container { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.07); padding: 1.5em; margin-bottom: 2em; }
         .log-header { font-weight: bold; color: #2c5282; margin-bottom: 0.5em; display: flex; align-items: center; gap: 1em; }
         .log-line { display: flex; align-items: flex-start; }
-        .log-content { font-family: monospace; font-size: 1em; background: #f7fafc; border-radius: 4px; padding: 0.5em 1em; overflow-x: auto; white-space: pre-wrap; margin:0; }
+        .log-content { flex:1; font-family: monospace; font-size: 1em; background: #f7fafc; border-radius: 4px; padding: 0.5em 1em; overflow-x: auto; white-space: pre-wrap; margin:0; }
         .sensitive { background: #fffbe6; color: #b59a00; padding: 0.2em 0.4em; border-radius: 3px; font-weight: bold; }
         .server-label { font-weight: bold; padding: 0.2em 0.7em; border-radius: 4px; color: #fff; display: inline-block; }
         .line-number { color: #718096; font-size: 0.95em; font-family: monospace; background: #edf2f7; padding: 0.2em 0.5em; border-radius: 3px; margin-right: 0.5em; }
@@ -130,9 +130,9 @@
             </div>
             {{#lines}}
             <div class="log-line" data-log-line>
-                <pre class="log-content raw-view" style="display:block;">{{{raw}}}</pre>
+                <pre class="log-content raw-view" style="display:block;">{{raw}}</pre>
                 {{#isJson}}
-                    <pre class="log-content formatted-view" style="display:none;">{{{formatted}}}</pre>
+                    <pre class="log-content formatted-view" style="display:none;">{{formatted}}</pre>
                 {{/isJson}}
             </div>
             {{/lines}}
