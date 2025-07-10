@@ -59,6 +59,7 @@ module.exports = () => {
             });
             return { rowClass, nameCellContent, serverCells };
         });
+        console.log(`Rendering folder index for server group: ${serverKey}, path: /${path}`);
         res.render('path', {
             serverKey,
             rootUrl,

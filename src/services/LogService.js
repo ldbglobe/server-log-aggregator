@@ -7,9 +7,8 @@ const crypto = require('crypto');
 const gunzip = promisify(zlib.gunzip);
 
 class LogService {
-    constructor(servers,credentials) {
+    constructor(servers) {
         this.servers = servers;
-        this.credentials = credentials || {};
     }
 
     // Méthodes de FileUtils
@@ -40,11 +39,21 @@ class LogService {
         if (!filename) return false;
         const nonLogExtensions = [
             // Documents
-            '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt',
+            '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt',
+            '.pptx', '.txt', '.md', '.rtf', '.odt', '.csv',
             // Images
-            '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.ico',
-            // Autres formats
-            '.xml', '.json', '.csv', '.html', '.htm', '.css', '.js',
+            '.jpg', '.jpeg', '.png', '.gif', '.bmp',
+            '.svg', '.ico', '.tiff', '.webp',
+            // Compressed files
+            '.zip', '.tar', '.tar.gz', '.rar', '.7z', '.tgz',
+            // Audio/Video
+            '.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a', '.wma',
+            '.avi', '.mpg', '.mpeg', '.mov', '.wmv', '.flv', '.webm',
+            // Code files
+            '.c', '.cpp', '.h', '.hpp', '.py', '.java', '.php', '.rb',
+            '.go', '.rs', '.ts', '.tsx', '.html', '.htm', '.xml',
+            '.json', '.yaml', '.yml', '.css', '.js',
+            // Exécutables
             '.exe', '.dll', '.so', '.dylib', '.bin'
         ];
         return nonLogExtensions.some(ext => filename.replace(/\.gz$/,'').toLowerCase().endsWith(ext));
@@ -75,7 +84,7 @@ class LogService {
     static buildPathUrl(basePath='', itemPath='', serverGroup='') {
         const normalizedBase = this.normalizePath(basePath);
         const normalizedItem = this.normalizePath(itemPath);
-        console.log(`[DEBUG] buildPathUrl - Base: ${normalizedBase}, Item: ${normalizedItem}, ServerGroup: ${serverGroup}`);
+        // -- console.log(`[DEBUG] buildPathUrl - Base: ${normalizedBase}, Item: ${normalizedItem}, ServerGroup: ${serverGroup}`);
         let url = '/path/';
         if (serverGroup) url += serverGroup + '/';
         url += normalizedBase + normalizedItem;
@@ -107,7 +116,7 @@ class LogService {
         return parts.map((part, index) => {
             const currentPath = parts.slice(0, index + 1).join('/');
             const isLast = index === parts.length - 1;
-            console.log(`[DEBUG] buildBreadcrumbs - Part: ${part}, Current Path: ${currentPath}, Is Last: ${isLast}`);
+            // -- console.log(`[DEBUG] buildBreadcrumbs - Part: ${part}, Current Path: ${currentPath}, Is Last: ${isLast}`);
             return {
                 name: part,
                 path: currentPath + (isLast ? '' : '/'),
@@ -139,27 +148,6 @@ class LogService {
             });
         })
         return matches;
-    }
-
-    getMissingCredentials() {
-        const requiredCredentialIds = new Set();
-        Object.values(this.servers).forEach(server => {
-            if (server.credentialId) {
-                requiredCredentialIds.add(server.credentialId);
-            }
-        });
-        const missingCredentials = [];
-        requiredCredentialIds.forEach(credentialId => {
-            if (!this.credentials[credentialId] || !this.credentials[credentialId].username || !this.credentials[credentialId].password) {
-                missingCredentials.push(credentialId);
-            }
-        });
-
-        return missingCredentials;
-    }
-
-    setCredentials(credentials) {
-        this.credentials = { ...this.credentials, ...credentials };
     }
 
     parseNginxIndex(html) {
@@ -195,22 +183,14 @@ class LogService {
             throw new Error(`Serveur non configuré: ${serverId}`);
         }
 
-        const credential = this.credentials[server.credentialId];
-        if (!credential || !credential.username || !credential.password) {
-            throw new Error(`Credentials manquants pour le serveur ${server.label}`);
-        }
-
         const normalizedPath = LogService.normalizePath(path);
         const fullUrl = server.url.replace(/\/$/, '') + '/' + normalizedPath;
-        console.log(`[DEBUG] makeRequest - URL appelée pour ${server.label}: ${fullUrl}`);
+        // -- console.log(`[DEBUG] makeRequest - URL appelée pour ${server.label}: ${fullUrl}`);
 
         const defaultOptions = {
-            auth: {
-                username: credential.username,
-                password: credential.password
-            }
+            auth: { ...server.auth }
         };
-        console.log(`[DEBUG] makeRequest - Options: ${JSON.stringify(defaultOptions)}`);
+        // -- console.log(`[DEBUG] makeRequest - Options: ${JSON.stringify(defaultOptions)}`);
 
         const requestOptions = {
             ...defaultOptions,
@@ -221,7 +201,7 @@ class LogService {
             const response = await axios.get(fullUrl, requestOptions);
             return response;
         } catch (error) {
-            console.error(`[DEBUG] makeRequest - Erreur pour ${server.label}:`, error.message);
+            // -- console.error(`[DEBUG] makeRequest - Erreur pour ${server.label}:`, error.message);
             if (error.response) {
                 console.error('[DEBUG] makeRequest - Status:', error.response.status);
                 console.error('[DEBUG] makeRequest - Headers:', error.response.headers);
@@ -348,8 +328,8 @@ class LogService {
     async fetchFileContent(path) {
         const results = [];
         const normalizedPath = LogService.normalizePath(path);
-        console.log(`[DEBUG] fetchFileContent - Chemin original: ${path}`);
-        console.log(`[DEBUG] fetchFileContent - Chemin normalisé: ${normalizedPath}`);
+        // -- console.log(`[DEBUG] fetchFileContent - Chemin original: ${path}`);
+        // -- console.log(`[DEBUG] fetchFileContent - Chemin normalisé: ${normalizedPath}`);
 
         // Essayer de récupérer les logs de chaque serveur
         for (const [serverId, server] of Object.entries(this.servers)) {
@@ -360,14 +340,14 @@ class LogService {
                 
                 let content;
                 if (normalizedPath.endsWith('.gz')) {
-                    console.log(`[DEBUG] fetchFileContent - Décompression du fichier .gz pour ${server.label}`);
+                    // -- console.log(`[DEBUG] fetchFileContent - Décompression du fichier .gz pour ${server.label}`);
                     content = (await gunzip(response.data)).toString('utf-8');
                 } else {
                     content = response.data.toString('utf-8');
                 }
 
                 if (content) {
-                    console.log(`[DEBUG] fetchFileContent - Contenu récupéré avec succès pour ${server.label} (${content.length} caractères)`);
+                    // -- console.log(`[DEBUG] fetchFileContent - Contenu récupéré avec succès pour ${server.label} (${content.length} caractères)`);
                     results.push({
                         content,
                         server: serverId,
@@ -403,7 +383,7 @@ class LogService {
             existingLog.servers = Array.from(new Set([...(existingLog.servers || []), ...(log.servers || [])]));
             }
         }
-        console.log(`[DEBUG] fetchFileContent - Nombre total de logs récupérés: ${dedupedLogs.length}`);
+        // -- console.log(`[DEBUG] fetchFileContent - Nombre total de logs récupérés: ${dedupedLogs.length}`);
 
         // Tri global par timestamp (nulls à la fin)
         return dedupedLogs.sort((a, b) => {
@@ -492,35 +472,22 @@ class LogService {
         const normalizedPath = LogService.normalizePath(path);
         const fullUrl = server.url.replace(/\/$/, '') + '/' + normalizedPath;
 
-        console.log(`[DEBUG] fetchRawLog - URL appelée pour ${server.label}: ${fullUrl}`);
-
-        const credential = this.credentials[server.credentialId];
-        if (!credential || !credential.username || !credential.password) {
-            throw new Error(`Credentials manquants pour le serveur ${server.label}`);
-        }
+        // -- console.log(`[DEBUG] fetchRawLog - URL appelée pour ${server.label}: ${fullUrl}`);
 
         const requestOptions = {
-            auth: {
-                username: credential.username,
-                password: credential.password
-            },
+            auth: { ...server.auth },
             responseType: 'arraybuffer'
         };
 
         try {
-            const response = await axios.get(fullUrl, {
-                ...requestOptions,
-                responseType: 'stream'
-            });
-            const stream = response.data; // This is a readable stream
-
+            const response = await axios.get(fullUrl, requestOptions);
+            let content;
             if (normalizedPath.endsWith('.gz')) {
-                console.log(`[DEBUG] fetchRawLog - Décompression du fichier .gz pour ${server.label}`);
-                return stream.pipe(zlib.createGunzip());
+                content = (await gunzip(response.data)).toString('utf-8');
+            } else {
+                content = response.data.toString('utf-8');
             }
-
-            console.log(`[DEBUG] fetchRawLog - Contenu brut récupéré avec succès pour ${server.label}`);
-            return stream;
+            return content;
         } catch (error) {
             console.error(`[DEBUG] fetchRawLog - Erreur pour ${server.label}:`, error.message);
             throw error;

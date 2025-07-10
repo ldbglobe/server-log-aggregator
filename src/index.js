@@ -34,22 +34,12 @@ app.use((req, res, next) => {
     }
     req.selectedserverKey = serverKey;
     req.selectedServers = config.servers[serverKey] || {};
-    req.logService = new LogService(req.selectedServers, config.credentials);
-    next();
-});
-
-// Middleware to check credentials
-app.use((req, res, next) => {
-    const missingCredentials = req.logService.getMissingCredentials();
-    if (missingCredentials.length > 0 && !req.path.startsWith('/auth')) {
-        return res.redirect('/auth/login');
-    }
+    req.logService = new LogService(req.selectedServers);
     next();
 });
 
 // Routes
 // Pass req.selectedServers to routes
-app.use('/auth', require('./routes/authRoutes')());
 app.use('/path', require('./routes/pathRoutes')());
 app.use('/view', require('./routes/viewRoutes')());
 app.use('/api', require('./routes/apiRoutes')());

@@ -24,7 +24,6 @@ module.exports = () => {
         const servers = req.selectedServers;
         const logService = req.logService;
         const path = req.params[0];
-        console.log(`Fetching logs for path: ${path} in server group: ${serverKey}`);
         if (!path) {
             return res.status(400).send('Path not specified');
         }
@@ -103,6 +102,7 @@ module.exports = () => {
                     sensitive: sensitiveData.some(item => item.lineNumber === log.lineNumber && serversForLog.some(s => s.label === item.label)),
                 };
             });
+            console.log(`Rendering aggregated view for server group: ${serverKey}, path: /${path}`);
             res.render('view', {
                 serverKey,
                 rootUrl,

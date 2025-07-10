@@ -47,7 +47,7 @@ module.exports = () => {
         try {
             const rawLog = await logService.fetchRawLog(serverId, filePath);
             res.type('text/plain');
-            rawLog.pipe(res);
+            res.send(rawLog);
         } catch (error) {
             console.error('Error while fetching raw file:', error);
             res.status(500).json({ error: error.message });
