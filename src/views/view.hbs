@@ -110,12 +110,6 @@
         .minimap { position: fixed; right: 10px; top: 50%; transform: translateY(-50%); width: 80px; max-height: 60vh; background: rgba(255, 255, 255, 0.9); border: 1px solid #e2e8f0; border-radius: 6px; z-index: 1003; padding: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .minimap-header { font-size: 0.75em; color: #718096; margin-bottom: 8px; text-align: center; }
         .minimap-content { height: 100%; overflow: hidden; position: relative; }
-        .minimap-item { height: 3px; margin-bottom: 1px; border-radius: 1px; cursor: pointer; transition: opacity 0.2s; }
-        .minimap-item:hover { opacity: 0.7; }
-        .minimap-item.visible { opacity: 1; }
-        .minimap-item.filtered { opacity: 0.3; }
-        .minimap-item.grayed { opacity: 0.2; }
-        .minimap-viewport { position: absolute; left: 0; right: 0; border: 2px solid #3182ce; border-radius: 2px; background: rgba(49, 130, 206, 0.1); pointer-events: none; }
         .minimap-toggle { position: fixed; right: 10px; top: 20%; background: #3182ce; color: white; border: none; border-radius: 4px; padding: 0.5em; cursor: pointer; z-index: 1004; font-size: 0.8em; transition: all 0.3s ease; }
         .minimap-toggle:hover { background: #2b6cb0; }
         .minimap.hidden { display: none; }
@@ -158,8 +152,8 @@
             <input type="text" id="logSearch" class="search-input" placeholder="Search logs (regex supported)..." title="Use regular expressions for search" autocomplete="off">
             <span class="search-info"><span id="matchCount">0</span> matches</span>
             <button class="filter-mode-toggle" onclick="toggleFilterMode()" title="Toggle between hiding and graying out filtered entries">
-                <i class="fas fa-eye-slash"></i>
-                <span id="filterModeText">Hide</span>
+                <i class="fas fa-eye"></i>
+                <span id="filterModeText">grayed</span>
             </button>
         </div>
     </header>
@@ -202,13 +196,13 @@
     <div class="minimap" id="minimap">
         <div class="minimap-header">Log Map</div>
         <div class="minimap-content" id="minimapContent">
-            <div class="minimap-viewport" id="minimapViewport"></div>
+            
         </div>
     </div>
     <script>
         let activeServerFilter = null;
         let activeTextFilter = '';
-        let filterMode = 'hide'; // 'hide' or 'gray'
+        let filterMode = 'gray';
 
         function toggleFilterMode() {
             const toggle = document.querySelector('.filter-mode-toggle');
@@ -218,13 +212,11 @@
             if (filterMode === 'hide') {
                 filterMode = 'gray';
                 icon.className = 'fas fa-eye';
-                text.textContent = 'Gray';
-                toggle.classList.add('active');
+                text.textContent = 'grayed';
             } else {
                 filterMode = 'hide';
                 icon.className = 'fas fa-eye-slash';
-                text.textContent = 'Hide';
-                toggle.classList.remove('active');
+                text.textContent = 'hidden';
             }
             
             // Re-apply filters with new mode
@@ -389,80 +381,114 @@
         
         function updateMinimap() {
             const minimap = document.getElementById('minimap');
-            if (minimap.classList.contains('hidden')) return;
-            
-            const minimapContent = document.getElementById('minimapContent');
-            const minimapViewport = document.getElementById('minimapViewport');
-            
-            // Clear existing items
-            const existingItems = minimapContent.querySelectorAll('.minimap-item');
-            existingItems.forEach(item => item.remove());
-            
-            // Get all log containers
-            const logContainers = document.querySelectorAll('.log-container');
-            const contentHeight = minimapContent.offsetHeight;
-            const itemHeight = 3;
-            const itemSpacing = 1;
-            const totalItemHeight = itemHeight + itemSpacing;
-            
-            logContainers.forEach((container, index) => {
-                const minimapItem = document.createElement('div');
-                minimapItem.className = 'minimap-item';
-                minimapItem.style.top = `${(index * totalItemHeight) % contentHeight}px`;
-                
-                // Get server colors from the log container
-                const serverLabels = container.querySelectorAll('.server-label');
-                if (serverLabels.length > 0) {
-                    const firstServerColor = window.getComputedStyle(serverLabels[0]).backgroundColor;
-                    minimapItem.style.backgroundColor = firstServerColor;
+
+            const lines = [];
+            let prev = null;
+            document.querySelectorAll('#logs-list .log-container').forEach(container => {
+                const color = container.querySelector('.server-label') ? container.querySelector('.server-label').style.backgroundColor : '#ccc';
+                const filtered = container.classList.contains('grayed-out');
+                const height = container.offsetHeight;
+                const top = container.offsetTop;
+
+                if (
+                    prev &&
+                    prev.color === color &&
+                    prev.filtered === filtered
+                ) {
+                    // Merge with previous
+                    prev.height = (top - prev.top) + height;
                 } else {
-                    minimapItem.style.backgroundColor = '#cbd5e0';
+                    // Start new segment
+                    prev = {
+                        height,
+                        top: (prev ? prev.top+prev.height : top),
+                        filtered,
+                        color
+                    };
+                    lines.push(prev);
                 }
-                
-                // Set visibility based on filter state
-                const isFiltered = container.getAttribute('data-filter-server') === 'false' || 
-                                 container.getAttribute('data-filter-text') === 'false';
-                const isGrayed = container.classList.contains('grayed-out');
-                
-                if (isFiltered && filterMode === 'hide') {
-                    minimapItem.classList.add('filtered');
-                } else if (isGrayed) {
-                    minimapItem.classList.add('grayed');
-                } else {
-                    minimapItem.classList.add('visible');
-                }
-                
-                // Add click handler to scroll to log entry
-                minimapItem.addEventListener('click', () => {
-                    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                });
-                
-                minimapContent.appendChild(minimapItem);
             });
-            
+
+            //console.log(lines);
+
+            const minimapContent = document.getElementById('minimapContent');
+            minimapContent.innerHTML = '';
+            const canvas = document.createElement('canvas');
+            canvas.width = minimapContent.offsetWidth;
+            canvas.height = minimapContent.offsetHeight || 300;
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            const ctx = canvas.getContext('2d');
+            lines.forEach((line, index) => {
+                if(line.filtered && filterMode === 'hide') {
+                    return; // Skip filtered lines in hide mode
+                }
+                ctx.globalAlpha = line.filtered ? 0.1 : 1.0;
+                ctx.fillStyle = line.color;
+                const y = (line.top / document.documentElement.scrollHeight) * canvas.height;
+                const height = (line.height / document.documentElement.scrollHeight) * canvas.height;
+                ctx.fillRect(0, y, canvas.width, height);
+            });
+
+            minimapContent.appendChild(canvas);
+
+            canvas.addEventListener('click', function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const y = e.clientY - rect.top;
+                const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                const targetScroll = (y / canvas.height) * scrollHeight;
+                window.scrollTo({
+                    top: targetScroll,
+                    behavior: 'smooth'
+                });
+            });
+
             updateMinimapViewport();
         }
-        
+
         function updateMinimapViewport() {
-            const minimapViewport = document.getElementById('minimapViewport');
             const minimapContent = document.getElementById('minimapContent');
-            
-            if (!minimapViewport || !minimapContent) return;
-            
+            const baseCanvas = minimapContent.querySelector('canvas');
+            if (!baseCanvas) return;
+
+            // Remove existing viewport overlay if any
+            let overlay = minimapContent.querySelector('.minimap-viewport-overlay');
+            if (!overlay) {
+                overlay = document.createElement('canvas');
+                overlay.className = 'minimap-viewport-overlay';
+                overlay.style.position = 'absolute';
+                overlay.style.left = '0';
+                overlay.style.top = '0';
+                overlay.style.pointerEvents = 'none';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.zIndex = '2';
+                minimapContent.appendChild(overlay);
+            }
+
+            // Match overlay size to base canvas
+            overlay.width = baseCanvas.width;
+            overlay.height = baseCanvas.height;
+
+            const ctx = overlay.getContext('2d');
+            ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+            const scrollHeight = document.documentElement.scrollHeight;
+            const clientHeight = document.documentElement.clientHeight;
             const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-            const viewportHeight = window.innerHeight;
-            
-            if (scrollHeight <= 0) return;
-            
-            const contentHeight = minimapContent.offsetHeight;
-            const viewportTop = (scrollTop / scrollHeight) * contentHeight;
-            const viewportHeightRatio = Math.min(viewportHeight / document.documentElement.scrollHeight, 1);
-            const viewportPixelHeight = viewportHeightRatio * contentHeight;
-            
-            minimapViewport.style.top = `${viewportTop}px`;
-            minimapViewport.style.height = `${viewportPixelHeight}px`;
+
+            const y = (scrollTop / scrollHeight) * overlay.height;
+            const h = (clientHeight / scrollHeight) * overlay.height;
+
+            ctx.strokeStyle = '#FA4D66';
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.7;
+            ctx.strokeRect(1, y, overlay.width - 2, h);
+            ctx.globalAlpha = 0.15;
+            ctx.fillStyle = '#FA4D66';
+            ctx.fillRect(1, y, overlay.width - 2, h);
         }
+        
         
         // Scroll tracking and progress bar
         function updateScrollProgress() {
