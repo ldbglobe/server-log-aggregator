@@ -4,7 +4,9 @@
     <title>Log Viewer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { font-family: Arial, sans-serif; margin: 2em; background: #f5f5f5; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+        header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #ffffff; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); padding: 1em 2em; }
+        main { margin-top: 220px; padding: 0 2em 2em; }
         .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5em; }
         .breadcrumb { display: flex; align-items: center; gap: 0.5em; background: #f7fafc; padding: 0.75em 1em; border-radius: 6px; border: 1px solid #e2e8f0; }
         .breadcrumb i { margin-right: 0.5em; }
@@ -70,6 +72,30 @@
         .log-container[data-filter-text="false"] {
             display: none !important;
         }
+        .log-container.grayed-out {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        .filter-mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+            margin-left: 1em;
+            padding: 0.3em 0.7em;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 0.9em;
+        }
+        .filter-mode-toggle:hover {
+            background: #e2e8f0;
+        }
+        .filter-mode-toggle.active {
+            background: #bee3f8;
+            border-color: #3182ce;
+        }
         .server-filter-btn.active {
             background: #bee3f8;
             border-color: #3182ce;
@@ -77,74 +103,133 @@
         .api-link { display: inline-flex; align-items: center; gap: 0.5em; background: #2c5282; color: white; text-decoration: none; padding: 0.5em 1em; border-radius: 4px; font-weight: 500; transition: background-color 0.2s; }
         .api-link:hover { background: #2b6cb0; }
         .api-link i { font-size: 0.9em; }
+        .scroll-to-top { position: fixed; bottom: 20px; right: 20px; background: #3182ce; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.2em; box-shadow: 0 2px 10px rgba(0,0,0,0.2); transition: all 0.3s ease; z-index: 1001; opacity: 0; visibility: hidden; }
+        .scroll-to-top.visible { opacity: 1; visibility: visible; }
+        .scroll-to-top:hover { background: #2b6cb0; transform: translateY(-2px); }
+        .scroll-progress { position: fixed; top: 0; left: 0; width: 0%; height: 3px; background: linear-gradient(90deg, #3182ce, #63b3ed); z-index: 1002; transition: width 0.1s ease; }
+        .minimap { position: fixed; right: 10px; top: 50%; transform: translateY(-50%); width: 80px; max-height: 60vh; background: rgba(255, 255, 255, 0.9); border: 1px solid #e2e8f0; border-radius: 6px; z-index: 1003; padding: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .minimap-header { font-size: 0.75em; color: #718096; margin-bottom: 8px; text-align: center; }
+        .minimap-content { height: 100%; overflow: hidden; position: relative; }
+        .minimap-item { height: 3px; margin-bottom: 1px; border-radius: 1px; cursor: pointer; transition: opacity 0.2s; }
+        .minimap-item:hover { opacity: 0.7; }
+        .minimap-item.visible { opacity: 1; }
+        .minimap-item.filtered { opacity: 0.3; }
+        .minimap-item.grayed { opacity: 0.2; }
+        .minimap-viewport { position: absolute; left: 0; right: 0; border: 2px solid #3182ce; border-radius: 2px; background: rgba(49, 130, 206, 0.1); pointer-events: none; }
+        .minimap-toggle { position: fixed; right: 10px; top: 20%; background: #3182ce; color: white; border: none; border-radius: 4px; padding: 0.5em; cursor: pointer; z-index: 1004; font-size: 0.8em; transition: all 0.3s ease; }
+        .minimap-toggle:hover { background: #2b6cb0; }
+        .minimap.hidden { display: none; }
     </style>
 </head>
 <body>
-    <div class="header-container">
-        <div class="breadcrumb">
-            <a href="/" class="server-key"><i class="fas fa-server"></i></a> /
-            <a href="{{rootUrl}}"><i class="fas fa-home"></i>{{serverKey}}</a>
-            {{#breadcrumbs}}
-                <span class="separator">/</span>
-                {{#isLast}}
-                    <span class="current">{{name}}</span>
-                {{/isLast}}
-                {{^isLast}}
-                    <a href="{{url}}">{{name}}</a>
-                {{/isLast}}
-            {{/breadcrumbs}}
+    <div class="scroll-progress"></div>
+    <header>
+        <div class="header-container">
+            <div class="breadcrumb">
+                <a href="/" class="server-key"><i class="fas fa-server"></i></a> /
+                <a href="{{rootUrl}}"><i class="fas fa-home"></i>{{serverKey}}</a>
+                {{#breadcrumbs}}
+                    <span class="separator">/</span>
+                    {{#isLast}}
+                        <span class="current">{{name}}</span>
+                    {{/isLast}}
+                    {{^isLast}}
+                        <a href="{{url}}">{{name}}</a>
+                    {{/isLast}}
+                {{/breadcrumbs}}
+            </div>
+            <a href="{{apiUrl}}" class="api-link">
+                <i class="fas fa-code"></i>JSON
+            </a>
         </div>
-        <a href="{{apiUrl}}" class="api-link">
-            <i class="fas fa-code"></i>JSON
-        </a>
-    </div>
-    <div class="server-legend">
-        {{#serverInfos}}
-            <button class="server-legend-item server-filter-btn" 
-                style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 0.3em 0.7em; display: flex; align-items: center; gap: 0.5em; cursor: pointer; transition: background 0.2s;"
-                data-server-id="{{id}}">
-                <span class="server-color" style="background: {{color}}"></span>
-                <span>{{label}}</span>
-                <span style="color:#888; font-size:0.95em;">({{lineCount}} lignes)</span>
-                <span class="filter-state" style="margin-left:0.5em; color:#3182ce; font-size:0.95em; display:none;">Filtre actif</span>
+        <div class="server-legend">
+            {{#serverInfos}}
+                <button class="server-legend-item server-filter-btn" 
+                    style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 0.3em 0.7em; display: flex; align-items: center; gap: 0.5em; cursor: pointer; transition: background 0.2s;"
+                    data-server-id="{{id}}">
+                    <span class="server-color" style="background: {{color}}"></span>
+                    <span>{{label}}</span>
+                    <span style="color:#888; font-size:0.95em;">({{lineCount}} lignes)</span>
+                    <span class="filter-state" style="margin-left:0.5em; color:#3182ce; font-size:0.95em; display:none;">Filtre actif</span>
+                </button>
+            {{/serverInfos}}
+        </div>
+        <div class="search-container">
+            <input type="text" id="logSearch" class="search-input" placeholder="Search logs (regex supported)..." title="Use regular expressions for search" autocomplete="off">
+            <span class="search-info"><span id="matchCount">0</span> matches</span>
+            <button class="filter-mode-toggle" onclick="toggleFilterMode()" title="Toggle between hiding and graying out filtered entries">
+                <i class="fas fa-eye-slash"></i>
+                <span id="filterModeText">Hide</span>
             </button>
-        {{/serverInfos}}
-    </div>
-    <div class="search-container">
-        <input type="text" id="logSearch" class="search-input" placeholder="Search logs (regex supported)..." title="Use regular expressions for search" autocomplete="off">
-        <span class="search-info"><span id="matchCount">0</span> matches</span>
-    </div>
-    <div id="logs-list">
-    {{#logs}}
-        <div class="log-container">
-            <div class="log-header" style="display: flex; align-items: center;">
-                {{#servers}}
-                    <span class="server-label" style="background: {{color}}" data-server-id="{{id}}">{{label}}</span>
-                {{/servers}}
-                <span class="line-number">L{{lineNumber}}</span>
-                <span class="timestamp">{{timestamp}}</span>
-                <span>({{lineCount}} lines)</span>
-                {{#isJson}}
-                    <button class="toggle-json-btn" onclick="toggleJsonView(this)">Show formatted</button>
-                {{/isJson}}
-            </div>
-            {{#lines}}
-            <div class="log-line" data-log-line>
-                <pre class="log-content raw-view" style="display:block;">{{raw}}</pre>
-                {{#isJson}}
-                    <pre class="log-content formatted-view" style="display:none;">{{formatted}}</pre>
-                {{/isJson}}
-            </div>
-            {{/lines}}
-            {{#sensitive}}
-                <div class="sensitive">Sensitive data detected!</div>
-            {{/sensitive}}
         </div>
-    {{/logs}}
+    </header>
+    <main>
+        <div id="logs-list">
+        {{#logs}}
+            <div class="log-container">
+                <div class="log-header" style="display: flex; align-items: center;">
+                    {{#servers}}
+                        <span class="server-label" style="background: {{color}}" data-server-id="{{id}}">{{label}}</span>
+                    {{/servers}}
+                    <span class="line-number">L{{lineNumber}}</span>
+                    <span class="timestamp">{{timestamp}}</span>
+                    <span>({{lineCount}} lines)</span>
+                    {{#isJson}}
+                        <button class="toggle-json-btn" onclick="toggleJsonView(this)">Show formatted</button>
+                    {{/isJson}}
+                </div>
+                {{#lines}}
+                <div class="log-line" data-log-line>
+                    <pre class="log-content raw-view" style="display:block;">{{raw}}</pre>
+                    {{#isJson}}
+                        <pre class="log-content formatted-view" style="display:none;">{{formatted}}</pre>
+                    {{/isJson}}
+                </div>
+                {{/lines}}
+                {{#sensitive}}
+                    <div class="sensitive">Sensitive data detected!</div>
+                {{/sensitive}}
+            </div>
+        {{/logs}}
+        </div>
+    </main> 
+    <button class="scroll-to-top" onclick="scrollToTop()">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+    <button class="minimap-toggle" onclick="toggleMinimap()" title="Toggle minimap">
+        <i class="fas fa-map"></i>
+    </button>
+    <div class="minimap" id="minimap">
+        <div class="minimap-header">Log Map</div>
+        <div class="minimap-content" id="minimapContent">
+            <div class="minimap-viewport" id="minimapViewport"></div>
+        </div>
     </div>
     <script>
         let activeServerFilter = null;
         let activeTextFilter = '';
+        let filterMode = 'hide'; // 'hide' or 'gray'
+
+        function toggleFilterMode() {
+            const toggle = document.querySelector('.filter-mode-toggle');
+            const icon = toggle.querySelector('i');
+            const text = document.getElementById('filterModeText');
+            
+            if (filterMode === 'hide') {
+                filterMode = 'gray';
+                icon.className = 'fas fa-eye';
+                text.textContent = 'Gray';
+                toggle.classList.add('active');
+            } else {
+                filterMode = 'hide';
+                icon.className = 'fas fa-eye-slash';
+                text.textContent = 'Hide';
+                toggle.classList.remove('active');
+            }
+            
+            // Re-apply filters with new mode
+            applyLogFilters();
+        }
 
         function applyLogFilters() {
             const regex = (() => {
@@ -159,7 +244,7 @@
                 if (activeServerFilter) {
                     hasServer = Array.from(container.querySelectorAll('.server-label')).some(lbl => lbl.getAttribute('data-server-id') === activeServerFilter);
                 }
-                container.setAttribute('data-filter-server', hasServer ? 'true' : 'false');
+                
                 // Filtre texte
                 let hasText = false;
                 if (regex) {
@@ -179,10 +264,29 @@
                         pre.innerHTML = pre.textContent;
                     });
                 }
-                container.setAttribute('data-filter-text', hasText ? 'true' : 'false');
-                if (hasServer && hasText) matchCount++;
+                
+                const shouldShow = hasServer && hasText;
+                
+                // Apply filter based on mode
+                if (filterMode === 'hide') {
+                    container.setAttribute('data-filter-server', hasServer ? 'true' : 'false');
+                    container.setAttribute('data-filter-text', hasText ? 'true' : 'false');
+                    container.classList.remove('grayed-out');
+                } else {
+                    // Gray mode - show all but gray out filtered
+                    container.setAttribute('data-filter-server', 'true');
+                    container.setAttribute('data-filter-text', 'true');
+                    if (shouldShow) {
+                        container.classList.remove('grayed-out');
+                    } else {
+                        container.classList.add('grayed-out');
+                    }
+                }
+                
+                if (shouldShow) matchCount++;
             });
             document.getElementById('matchCount').textContent = matchCount;
+            updateMinimap();
         }
 
         // Init boutons serveur
@@ -247,6 +351,7 @@
                 applyLogFilters();
             }, 200));
             applyLogFilters();
+            updateMinimap();
         });
         function toggleJsonView(btn) {
             // Find the .log-line block that follows the header
@@ -266,6 +371,132 @@
                 }
             }
         }
+        
+        // Minimap functionality
+        function toggleMinimap() {
+            const minimap = document.getElementById('minimap');
+            const toggle = document.querySelector('.minimap-toggle');
+            
+            if (minimap.classList.contains('hidden')) {
+                minimap.classList.remove('hidden');
+                toggle.innerHTML = '<i class="fas fa-map"></i>';
+                updateMinimap();
+            } else {
+                minimap.classList.add('hidden');
+                toggle.innerHTML = '<i class="fas fa-map-marked"></i>';
+            }
+        }
+        
+        function updateMinimap() {
+            const minimap = document.getElementById('minimap');
+            if (minimap.classList.contains('hidden')) return;
+            
+            const minimapContent = document.getElementById('minimapContent');
+            const minimapViewport = document.getElementById('minimapViewport');
+            
+            // Clear existing items
+            const existingItems = minimapContent.querySelectorAll('.minimap-item');
+            existingItems.forEach(item => item.remove());
+            
+            // Get all log containers
+            const logContainers = document.querySelectorAll('.log-container');
+            const contentHeight = minimapContent.offsetHeight;
+            const itemHeight = 3;
+            const itemSpacing = 1;
+            const totalItemHeight = itemHeight + itemSpacing;
+            
+            logContainers.forEach((container, index) => {
+                const minimapItem = document.createElement('div');
+                minimapItem.className = 'minimap-item';
+                minimapItem.style.top = `${(index * totalItemHeight) % contentHeight}px`;
+                
+                // Get server colors from the log container
+                const serverLabels = container.querySelectorAll('.server-label');
+                if (serverLabels.length > 0) {
+                    const firstServerColor = window.getComputedStyle(serverLabels[0]).backgroundColor;
+                    minimapItem.style.backgroundColor = firstServerColor;
+                } else {
+                    minimapItem.style.backgroundColor = '#cbd5e0';
+                }
+                
+                // Set visibility based on filter state
+                const isFiltered = container.getAttribute('data-filter-server') === 'false' || 
+                                 container.getAttribute('data-filter-text') === 'false';
+                const isGrayed = container.classList.contains('grayed-out');
+                
+                if (isFiltered && filterMode === 'hide') {
+                    minimapItem.classList.add('filtered');
+                } else if (isGrayed) {
+                    minimapItem.classList.add('grayed');
+                } else {
+                    minimapItem.classList.add('visible');
+                }
+                
+                // Add click handler to scroll to log entry
+                minimapItem.addEventListener('click', () => {
+                    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+                
+                minimapContent.appendChild(minimapItem);
+            });
+            
+            updateMinimapViewport();
+        }
+        
+        function updateMinimapViewport() {
+            const minimapViewport = document.getElementById('minimapViewport');
+            const minimapContent = document.getElementById('minimapContent');
+            
+            if (!minimapViewport || !minimapContent) return;
+            
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const viewportHeight = window.innerHeight;
+            
+            if (scrollHeight <= 0) return;
+            
+            const contentHeight = minimapContent.offsetHeight;
+            const viewportTop = (scrollTop / scrollHeight) * contentHeight;
+            const viewportHeightRatio = Math.min(viewportHeight / document.documentElement.scrollHeight, 1);
+            const viewportPixelHeight = viewportHeightRatio * contentHeight;
+            
+            minimapViewport.style.top = `${viewportTop}px`;
+            minimapViewport.style.height = `${viewportPixelHeight}px`;
+        }
+        
+        // Scroll tracking and progress bar
+        function updateScrollProgress() {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollProgress = (scrollTop / scrollHeight) * 100;
+            
+            document.querySelector('.scroll-progress').style.width = scrollProgress + '%';
+            
+            // Show/hide scroll to top button
+            const scrollToTopBtn = document.querySelector('.scroll-to-top');
+            if (scrollTop > 300) {
+                scrollToTopBtn.classList.add('visible');
+            } else {
+                scrollToTopBtn.classList.remove('visible');
+            }
+            
+            // Update minimap viewport
+            updateMinimapViewport();
+        }
+        
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        
+        // Initialize scroll tracking
+        window.addEventListener('scroll', updateScrollProgress);
+        window.addEventListener('resize', updateScrollProgress);
+        
+        // Update on load
+        window.addEventListener('load', updateScrollProgress);
     </script>
 </body>
 </html>
