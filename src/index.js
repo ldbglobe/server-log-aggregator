@@ -55,6 +55,12 @@ process.on('SIGINT', () => {
 app.listen(port, () => {
     // Log the server start message with colored output
     console.log(chalk.green(`Server started at ${chalk.underline(`http://localhost:${port}`)}`));
+    if (process.env.NODE_ENV === 'development') {
+        console.log(chalk.blue('Running in development mode.'));
+    }
+    else {
+        console.log(chalk.blue('Running in production mode.'));
+    }
     // Press CTRL+C to stop the server
     console.log(chalk.yellow('Press CTRL+C to stop the server.'));
     openurl.open(`http://localhost:${port}`);
