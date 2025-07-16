@@ -37,7 +37,7 @@ module.exports = () => {
             if (isDirectory) {
                 nameCellContent = `<a href="${LogService.buildPathUrl(path, entry.name, serverKey)}" class="${linkClass}"><i class="fas ${icon}"></i>${entry.name}</a>`;
             } else if (isLogFile) {
-                nameCellContent = `<a href="#" onclick="handleFileClick('${LogService.buildViewUrl(path, entry.name, serverKey)}', ${haveLargeFile})" class="${linkClass}"><i class="fas ${icon}"></i>${entry.name}</a>`;
+                nameCellContent = `<a href="#" onclick="event.preventDefault(); handleFileClick('${LogService.buildViewUrl(path, entry.name, serverKey)}', ${haveLargeFile})" class="${linkClass}"><i class="fas ${icon}"></i>${entry.name}</a>`;
             } else {
                 nameCellContent = `<i class="fas ${icon}"></i>${entry.name}`;
             }
